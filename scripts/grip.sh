@@ -42,7 +42,7 @@ declare FLAC_HASH_CHARS="[0-9a-f]{40}"
 declare FLAC_HASH="sha1sum"
 declare FLAC_BLCK="8"
 
-declare ID_DISC_CHARS="[a-zA-Z0-9_-]{28}"
+declare ID_DISC_CHARS="[a-zA-Z0-9_.-]{28}"
 declare ID_DISC=
 declare ID_CODE_CHARS="[0-9]{13}"
 declare ID_CODE=
