@@ -400,7 +400,7 @@ function cd_encode {
 		[[ ${ID_URL} != null ]];
 	}; then
 		if [[ -s _id.url ]]; then
-			ID_URL="$(cat _id.url)"
+			ID_URL="$(head -n1 _id.url)"
 		else
 			run_cmd "${FUNCNAME}: url" ${GREP} --color=never "^CATALOG " audio.cue
 			echo -en "URL: https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
@@ -487,8 +487,16 @@ function cd_encode {
 			[[ ! -f $(${LS} _image.${ID_URL_NUM}.[0-9-]*) ]] &&
 			[[ ${ID_URL} != null ]];
 		}; then
-			echo -en "URL: ${ID_URL}\n"
-			read -p "URL: " ID_URL_IMG
+			if [[ -n $(tail -n+2 _id.url 2>/dev/null) ]]; then
+				ID_URL_IMG="$(tail -n+2 _id.url)"
+			else
+				echo -en "URL (image): ${ID_URL}\n"
+				read -p "URL (image): " ID_URL_IMG
+				if [[ -n ${ID_URL_IMG} ]]; then
+					echo "${ID_URL}"	>_id.url
+					echo "${ID_URL_IMG}"	>>_id.url
+				fi
+			fi
 			if [[ -z ${ID_URL_IMG} ]]; then
 				return 1
 			fi
