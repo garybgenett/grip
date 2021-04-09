@@ -475,16 +475,18 @@ function cd_encode {
 			[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]*) ]] &&
 			[[ ${ID_MBID} != null ]];
 		}; then
-			run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.json"				http://coverartarchive.org/release/${ID_MBID} #>>> || return 1
+			run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.json"				http://coverartarchive.org/release/${ID_MBID}		#>>> || return 1
+#>>>			run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.front.jpg"				http://coverartarchive.org/release/${ID_MBID}/front	|| return 1
+#>>>			run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.back.jpg"				http://coverartarchive.org/release/${ID_MBID}/back	|| return 1
 			strip_file image.${ID_MBID}.json
 			if { [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; }; then
 				${LL} image.${ID_MBID}.json*
 				return 1
 			fi
 			declare IMGS=($(jq --raw-output '.images[] | .id'								image.${ID_MBID}.json))
-			declare FRNT=($(jq --raw-output '.images[] | select(.types[]? | contains("Front")) | .id'			image.${ID_MBID}.json))
-			declare BACK=($(jq --raw-output '.images[] | select(.types[]? | contains("Back")) | .id'			image.${ID_MBID}.json))
-			declare MEDI=($(jq --raw-output '.images[] | select(.types[]? | contains("Medium")) | .id'			image.${ID_MBID}.json))
+#>>>			declare FRNT=($(jq --raw-output '.images[] | select(.types[]? | contains("Front")) | .id'			image.${ID_MBID}.json))
+#>>>			declare BACK=($(jq --raw-output '.images[] | select(.types[]? | contains("Back")) | .id'			image.${ID_MBID}.json))
+#>>>			declare MEDI=($(jq --raw-output '.images[] | select(.types[]? | contains("Medium")) | .id'			image.${ID_MBID}.json))
 			for FILE in ${IMGS[@]}; do
 				if [[ ! -s image.${ID_MBID}.${FILE}.jpg ]]; then
 					run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.${FILE}.jpg"	http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg || return 1
