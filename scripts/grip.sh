@@ -121,7 +121,7 @@ function run_cmd {
 	echo -en "\n"		1>&2
 	printf "=%.0s" {1..80}	1>&2
 	echo -en "\n"		1>&2
-	echo -en "COMMAND: "	1>&2
+	echo -en "=== "		1>&2
 	echo -en "${@}"		1>&2
 	echo -en "\n"		1>&2
 	printf "=%.0s" {1..80}	1>&2
