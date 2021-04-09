@@ -303,8 +303,13 @@ function cd_encode {
 		[[ ! -s audio.wav	]];
 	}; then
 		cat /dev/null >.audio.log
-		run_cmd "${FUNCNAME}: audio" $(which cdparanoia)	--version 2>&1 | tee -a .audio.log
-		run_cmd "${FUNCNAME}: audio" $(which cdda2wav)		--version 2>&1 | tee -a .audio.log
+		run_cmd "${FUNCNAME}: audio" $(which cdparanoia)	--version	2>&1 | tee -a .audio.log
+		run_cmd "${FUNCNAME}: audio" $(which cdda2wav)		--version	2>&1 | tee -a .audio.log
+		run_cmd "${FUNCNAME}: audio" $(which cdir)		-V		2>&1 | tee -a .audio.log
+		run_cmd "${FUNCNAME}: audio" $(which cdir) \
+			-D -n -d ${SOURCE} \
+			2>&1 | tee -a .audio.log
+			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
 		run_cmd "${FUNCNAME}: audio" $(which cdda2wav) \
 			-verbose-level all \
 			-speed 6 \
