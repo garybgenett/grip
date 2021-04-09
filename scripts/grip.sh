@@ -2,8 +2,6 @@
 source ${HOME}/.bashrc
 ################################################################################
 
-declare DATE="$(date --iso)"
-
 declare OUTPUT="_output"
 declare INPUT=
 
@@ -11,6 +9,13 @@ declare SOURCE="/dev/sr0"
 declare TRACKN="1"
 declare A_LANG="en"
 declare S_LANG=""
+
+################################################################################
+
+declare DATE="$(date --iso)"
+
+declare FRAMES_PER_SECOND="75"
+declare SECOND_PER_MINUTE="60"
 
 ########################################
 
@@ -33,6 +38,12 @@ declare CROPTST="30"
 
 ########################################
 
+declare CDDB_SERVER="gnudb.org"
+declare CDDB="-1"
+
+declare PARANOIA_OPTS="proof"
+declare CD_SPEED="6"
+
 declare FLAC_MANY="Various Artists"
 declare FLAC_TDIV=" \/\/ "
 declare FLAC_ADIV="\; "
@@ -46,13 +57,14 @@ declare ID_DISC_CHARS="[a-zA-Z0-9_.-]{28}"
 declare ID_DISC=
 declare ID_CODE_CHARS="[0-9]{13}"
 declare ID_CODE=
-declare ID_URL=
-declare ID_URL_NUM=
 declare ID_MBID_CHARS="[0-9a-f-]{36}"
 declare ID_MBID=
 
-declare CDDB="-1"
-declare CDDB_SERVER="gnudb.org"
+declare ID_URL=
+declare ID_URL_NUM=
+declare ID_URL_IMG=
+
+########################################
 
 declare IMAGE_CMD="feh --scale-down --geometry 800x600"
 declare FLAC_OPTS="
@@ -214,8 +226,6 @@ function cd_export {
 ########################################
 
 function cd_cuefile {
-	declare FRAMES_PER_SECOND="75"
-	declare SECOND_PER_MINUTE="60"
 	declare TTL_M="00"
 	declare TTL_S="00"
 	declare TTL_F="00"
@@ -312,14 +322,14 @@ function cd_encode {
 			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
 		run_cmd "${FUNCNAME}: audio" $(which cdda2wav) \
 			-verbose-level all \
-			-speed 6 \
+			-speed ${CD_SPEED} \
 			-paranoia \
-			-paraopts proof \
-			-cuefile \
+			-paraopts ${PARANOIA_OPTS} \
 			-cddb ${CDDB} \
 			-cddbp-server ${CDDB_SERVER} \
 			-output-format wav \
 			-track all \
+			-cuefile \
 			-device ${SOURCE} \
 			2>&1 | tee -a .audio.log
 			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
@@ -477,7 +487,6 @@ function cd_encode {
 			[[ ! -f $(${LS} _image.${ID_URL_NUM}.[0-9-]*) ]] &&
 			[[ ${ID_URL} != null ]];
 		}; then
-			declare ID_URL_IMG=
 			echo -en "URL: ${ID_URL}\n"
 			read -p "URL: " ID_URL_IMG
 			if [[ -z ${ID_URL_IMG} ]]; then
