@@ -225,7 +225,7 @@ function cd_cuefile {
 	declare IDX_F=
 	shopt -s lastpipe
 	cdir -D -n -d ${SOURCE} 1>&2; echo -en "\n" 1>&2
-	cdir -D -n -d ${SOURCE} 2>/dev/null | ${GREP} -v "[a-z]" | while read -r FILE; do
+	cdir -D -n -d ${SOURCE} 2>/dev/null | ${GREP} -v -e "[a-z]" -e "\[DATA\]" | while read -r FILE; do
 		TRACK="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\4|g")"; if [[ ${TRACK} != [0-9][0-9] ]]; then TRACK="0${TRACK}"; fi
 		IDX_M="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\1|g")"; if [[ ${IDX_M} != [0-9][0-9] ]]; then IDX_M="0${IDX_M}"; fi
 		IDX_S="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\2|g")"; if [[ ${IDX_S} != [0-9][0-9] ]]; then IDX_S="0${IDX_S}"; fi
