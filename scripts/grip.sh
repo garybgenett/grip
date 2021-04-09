@@ -213,6 +213,41 @@ function cd_export {
 
 ########################################
 
+function cd_cuefile {
+	declare FRAMES_PER_SECOND="75"
+	declare SECOND_PER_MINUTE="60"
+	declare TTL_M="00"
+	declare TTL_S="00"
+	declare TTL_F="00"
+	declare TRACK=
+	declare IDX_M=
+	declare IDX_S=
+	declare IDX_F=
+	shopt -s lastpipe
+	cdir -D -n -d ${SOURCE} 1>&2; echo -en "\n" 1>&2
+	cdir -D -n -d ${SOURCE} 2>/dev/null | ${GREP} -v "[a-z]" | while read -r FILE; do
+		TRACK="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\4|g")"; if [[ ${TRACK} != [0-9][0-9] ]]; then TRACK="0${TRACK}"; fi
+		IDX_M="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\1|g")"; if [[ ${IDX_M} != [0-9][0-9] ]]; then IDX_M="0${IDX_M}"; fi
+		IDX_S="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\2|g")"; if [[ ${IDX_S} != [0-9][0-9] ]]; then IDX_S="0${IDX_S}"; fi
+		IDX_F="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\3|g")"; if [[ ${IDX_F} != [0-9][0-9] ]]; then IDX_F="0${IDX_F}"; fi
+		echo -en "  TRACK ${TRACK} AUDIO\n"
+		echo -en "    INDEX 01 ${TTL_M}:${TTL_S}:${TTL_F}\n"
+		echo -en "           + ${IDX_M}:${IDX_S}:${IDX_F}\n" 1>&2
+		echo -en "\n" 1>&2
+		TTL_F="$(expr ${TTL_F} + ${IDX_F})";	((${TTL_F} >= ${FRAMES_PER_SECOND})) && { TTL_S="$(expr ${TTL_S} + 1)"; TTL_F="$(expr ${TTL_F} - ${FRAMES_PER_SECOND})"; }
+		TTL_S="$(expr ${TTL_S} + ${IDX_S})";	((${TTL_S} >= ${SECOND_PER_MINUTE})) && { TTL_M="$(expr ${TTL_M} + 1)"; TTL_S="$(expr ${TTL_S} - ${SECOND_PER_MINUTE})"; }
+							((${TTL_S} >= ${SECOND_PER_MINUTE})) && { TTL_M="$(expr ${TTL_M} + 1)"; TTL_S="$(expr ${TTL_S} - ${SECOND_PER_MINUTE})"; }
+		TTL_M="$(expr ${TTL_M} + ${IDX_M})";
+		if [[ ${TTL_M} != [0-9][0-9] ]]; then TTL_M="0${TTL_M}"; fi
+		if [[ ${TTL_S} != [0-9][0-9] ]]; then TTL_S="0${TTL_S}"; fi
+		if [[ ${TTL_F} != [0-9][0-9] ]]; then TTL_F="0${TTL_F}"; fi
+	done
+	echo -en "      TOTAL: ${TTL_M}:${TTL_S}:${TTL_F}\n" 1>&2
+	return 0
+}
+
+########################################
+
 # merge wav files
 #	shnjoin -D -O always -i wav -o wav -e -a .audio.shn. *.wav
 #	sox -V4 --show-progress --ignore-length --type wav --combine concatenate *.wav .audio.sox.wav
@@ -941,6 +976,7 @@ elif [[ ${RTYPE} == -d ]]; then		dvd_rescue	"${@}" || exit 1
 elif [[ ${RTYPE} == -v ]]; then		vlc_encode	"${@}" || exit 1
 elif [[ ${RTYPE} == -m ]]; then		mp_encode	"${@}" || exit 1
 elif [[ ${RTYPE} == -a ]]; then		cd_export	"${@}" || exit 1
+elif [[ ${RTYPE} == -t ]]; then		cd_cuefile	"${@}" || exit 1
 elif [[ ${RTYPE} == -c ]]; then		cd_encode	"${@}" || exit 1
 fi
 
