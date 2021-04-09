@@ -870,7 +870,7 @@ function flac_export {
 		[[ ${COUNTR} != +(0) ]] &&
 		[[ -n $(
 			${GREP} -A4 "^  TRACK 01 AUDIO$" ${CUEDAT} |
-			${GREP} "^ +INDEX 00 00:00:00$" ${CUEDAT}
+			${GREP} "^    INDEX 00 00:00:00$" ${CUEDAT}
 		) ]];
 	}; then
 		COUNTR="$((${COUNTR/#0}+1))"
