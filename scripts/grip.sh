@@ -163,7 +163,7 @@ function strip_file {
 	declare STRIP="${1}" && shift
 	${SED} "/^[[:space:]]*$/d" ${STRIP} | tr -d '\n' >${STRIP}.${FUNCNAME}
 	${MV} ${STRIP}.${FUNCNAME} ${STRIP}
-	return 1
+	return 0
 }
 
 ################################################################################
