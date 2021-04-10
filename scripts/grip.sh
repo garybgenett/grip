@@ -422,21 +422,21 @@ function cd_encode {
 		[[ ${ID_MBID} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: mbid"
-		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.code.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"	#>>> || return 1
-		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.disc.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"						#>>> || return 1
-		strip_file id.code.html
-		strip_file id.disc.html
+		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"	#>>> || return 1
+		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"						#>>> || return 1
+		strip_file mb.${ID_CODE}.html
+		strip_file mb.${ID_DISC}.html
 		if {
-			{ [[ ! -s id.code.html ]] && [[ ! -f id.code.html.null ]]; } ||
-			{ [[ ! -s id.disc.html ]] && [[ ! -f id.disc.html.null ]]; };
+			{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; } ||
+			{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
 		}; then
-			${LL} id.code.html*
-			${LL} id.disc.html*
+			${LL} mb.${ID_CODE}.html*
+			${LL} mb.${ID_DISC}.html*
 			return 1
 		fi
 		run_cmd "${FUNCNAME}: mbid"
 		declare ID_MBIDS=($(
-			${SED} "s|(<a href=\"/release/${ID_MBID_CHARS}\")|\n\1|g" id.code.html id.disc.html |
+			${SED} "s|(<a href=\"/release/${ID_MBID_CHARS}\")|\n\1|g" mb.${ID_CODE}.html mb.${ID_DISC}.html |
 			${SED} -n "s|^.+/release/(${ID_MBID_CHARS}).+>([A-Z]{2})<.+$|\2:\1|gp" |
 			sort -u
 		))
