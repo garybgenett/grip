@@ -473,7 +473,12 @@ function cd_encode {
 	fi
 	run_cmd "${FUNCNAME}: output" cat _id.mbid
 
-	if [[ ! -s _image.icon.png ]]; then
+	if {
+		[[ ! -s _image.icon.png		]] ||
+		[[ ! -s _image.front.jpg	]] ||
+		[[ ! -s _image.back.jpg		]] ||
+		[[ ! -s _image.media.jpg	]];
+	}; then
 		run_cmd "${FUNCNAME}: images"
 		if {
 			[[ ! -f $(${LS} _image.${ID_URL_NUM}.[0-9-]*) ]] &&
@@ -547,24 +552,36 @@ function cd_encode {
 		fi
 		run_cmd "${FUNCNAME}: images"
 		function image_select {
-			declare IMAGE="${1}" && shift
-			if [[ ! -s _image.${IMAGE}.jpg ]]; then
-				echo -en "\n"
-				${LS} image.*.{png,jpg} | while read -r FILE; do
-					echo -en "${FILE}\n"
-				done
-				echo -en "_image.front.jpg\n"
-				read -p "IMAGE (${IMAGE}): " FILE
-				if [[ -n ${FILE} ]]; then
-					${LN} ${FILE} _image.${IMAGE}.jpg || return 1
+			declare IMG="${1}" && shift
+			declare VAL="${1}" && shift
+			echo -en "\n"
+			if [[ -s _image.${IMG}.jpg ]]; then
+				echo -en "IMAGE (${IMG}): $(realpath --relative-to="." _image.${IMG}.jpg) (file)\n"
+			fi
+			if [[ -n ${VAL} ]]; then
+				echo -en "IMAGE (${IMG}): ${VAL}\n"
+			fi
+			if [[ -s ${VAL} ]]; then
+				if [[ $(realpath --relative-to="." _image.${IMG}.jpg) != ${VAL} ]]; then
+					${LN} ${VAL} _image.${IMG}.jpg
+				fi
+			else
+				read -p "IMAGE (${IMG})> " FILE
+				if [[ -s ${FILE} ]]; then
+					${LN} ${FILE} _image.${IMG}.jpg
 				fi
 			fi
 			return 0
 		}
 		{ ${IMAGE_CMD} image.*.{png,jpg} 2>/dev/null || return 1; } &
+		${LS} image.*.{png,jpg} 2>/dev/null | while read -r FILE; do
+			echo -en "${FILE}\n"
+		done
+		echo -en "_image.front.jpg\n"
 		image_select front	|| return 1
 		image_select back	|| return 1
 		image_select media	|| return 1
+		echo -en "\n"
 		if {
 			[[ ! -s _image.front.jpg	]] ||
 			[[ ! -s _image.back.jpg		]] ||
@@ -576,6 +593,7 @@ function cd_encode {
 		if ! convert -verbose -background black -resize 32x32 -extent 32x32 _image.front.jpg _image.icon.png; then
 			return 1
 		fi
+		sleep 1;
 		${IMAGE_CMD} _image.*.{png,jpg} 2>/dev/null || return 1
 	fi
 #>>>	run_cmd "${FUNCNAME}: output" ${LL} _image.*
