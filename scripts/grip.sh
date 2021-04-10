@@ -56,6 +56,10 @@ declare FLAC_BLCK="8"
 declare ID_NAME_CHARS="[a-zA-Z0-9+_.-]+"
 declare ID_NAME=
 
+declare ID_FCVR=
+declare ID_BCVR=
+declare ID_MCVR=
+
 declare ID_DISC_CHARS="[a-zA-Z0-9_.-]{28}"
 declare ID_DISC=
 declare ID_CODE_CHARS="[0-9]{13}"
@@ -162,6 +166,30 @@ function namer {
 			-e "s|[[:space:]]+|_|g" \
 		| tr 'A-Z' 'a-z' \
 		| tr -d '\n'
+	return 0
+}
+
+########################################
+
+function meta_get {
+	declare META=".metadata"
+	if [[ -f ${1} ]]; then
+		META="${1}"
+		shift
+	fi
+	${SED} -n "s|^${1}:?[[:space:]]+(.+)$|\1|gp" ${META} 2>/dev/null | head -n1
+	return 0
+}
+
+########################################
+
+function meta_set {
+	declare META=".metadata"
+	if [[ -f ${1} ]]; then
+		META="${1}"
+		shift
+	fi
+	${SED} -i "s|^(${1}:?).*$|\1 ${2}|g" ${META}
 	return 0
 }
 
@@ -290,17 +318,37 @@ function cd_encode {
 	#		https://hydrogenaud.io/index.php?topic=60122.0
 	#	https://wiki.archlinux.org/index.php/CUE_Splitting
 	# https://www.izotope.com/en/learn/digital-audio-basics-sample-rate-and-bit-depth.html
+	if [[ ! -s .metadata ]]; then
+		cat /dev/null	>.metadata
+		printf "%-40.40s" "### file $(divider 2>&1)" >>.metadata
+		echo ""		>>.metadata
+		echo "NAME:"	>>.metadata
+		echo "FCVR:"	>>.metadata
+		echo "BCVR:"	>>.metadata
+		echo "MCVR:"	>>.metadata
+		printf "%-40.40s" "### meta $(divider 2>&1)" >>.metadata
+		echo ""		>>.metadata
+		echo "CODE:"	>>.metadata
+		echo "DISC:"	>>.metadata
+		echo "MBID:"	>>.metadata
+		echo "COGS:"	>>.metadata
+		echo "CIMG:"	>>.metadata
+		printf "%-40.40s" "### tags $(divider 2>&1)" >>.metadata
+		echo ""		>>.metadata
+	fi
+	run_cmd "${FUNCNAME}" cat .metadata
+
 	if [[ ${1} == -s ]]; then
 		shift
 		declare SAFE_LIST="
+			.metadata
+			\
 			.exported
 			.audio.log
 			.audio.cue
 			audio.cue
 			audio.wav
 			\
-			.id.disc
-			.id.code
 			_audio.cue
 		"
 		run_cmd "${FUNCNAME}" ${LL} --directory ${SAFE_LIST}
@@ -314,6 +362,7 @@ function cd_encode {
 		)
 		return 0
 	fi
+
 	if {
 		[[ ! -s .exported	]] ||
 		[[ ! -s .audio.log	]] ||
@@ -357,7 +406,7 @@ function cd_encode {
 		return 1
 	fi
 
-	ID_DISC="$(head -n1 .id.disc 2>/dev/null)"
+	ID_DISC="$(meta_get DISC)"
 	if {
 		[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]] &&
 		[[ ${ID_DISC} != null ]];
@@ -374,11 +423,10 @@ function cd_encode {
 		}; then
 			return 1
 		fi
-		echo "${ID_DISC}" >.id.disc
+		meta_set DISC ${ID_DISC}
 	fi
-	run_cmd "${FUNCNAME}: output" cat .id.disc
 
-	ID_CODE="$(head -n1 .id.code 2>/dev/null)"
+	ID_CODE="$(meta_get CODE)"
 	if {
 		[[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]] &&
 		[[ ${ID_CODE} != null ]];
@@ -398,16 +446,20 @@ function cd_encode {
 		}; then
 			return 1
 		fi
+		meta_set CODE ${ID_CODE}
+	fi
+	if [[ $(meta_get audio.cue CATALOG) != ${ID_CODE} ]]; then
+		run_cmd "${FUNCNAME}: code"
 		if [[ -z $(${GREP} "^CATALOG" audio.cue) ]]; then
 			${SED} -i "s|^(FILE .+)$|CATALOG ${ID_CODE}\n\1|g" audio.cue
+		else
+			meta_set audio.cue CATALOG ${ID_CODE}
 		fi
 		${RSYNC_U} audio.cue _audio.cue || return 1
-		echo "${ID_CODE}" >.id.code
 	fi
-	run_cmd "${FUNCNAME}: output" cat .id.code
 
-	ID_COGS="$(head -n1 _id.url 2>/dev/null)"
-	ID_CIMG="$(head -n2 _id.url 2>/dev/null | tail -n1)"
+	ID_COGS="$(meta_get COGS)"
+	ID_CIMG="$(meta_get CIMG)"
 	ID_CNUM="${ID_COGS/#*\/}"
 	if {
 		[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
@@ -426,11 +478,9 @@ function cd_encode {
 		}; then
 			return 1
 		fi
-		echo "${ID_COGS}"	>_id.url
-		echo "${ID_CIMG}"	>>_id.url
+		meta_set COGS ${ID_COGS}
 	fi
 	if {
-		[[ $(wc -l _id.url 2>/dev/null) == 2 ]] &&
 		[[ -z $(echo "${ID_CIMG}" | ${GREP} -o "^${ID_CIMG_CHARS}$") ]] &&
 		[[ ${ID_CIMG} != null ]];
 	}; then
@@ -446,10 +496,8 @@ function cd_encode {
 		}; then
 			return 1
 		fi
-		echo "${ID_COGS}"	>_id.url
-		echo "${ID_CIMG}"	>>_id.url
+		meta_set CIMG ${ID_CIMG}
 	fi
-	run_cmd "${FUNCNAME}: output" cat _id.url
 	if {
 		{ [[ ! -s id.${ID_CNUM}.html ]] && [[ ! -f id.${ID_CNUM}.html.null ]]; };
 	}; then
@@ -462,7 +510,7 @@ function cd_encode {
 		fi
 	fi
 
-	ID_MBID="$(head -n1 _id.mbid 2>/dev/null)"
+	ID_MBID="$(meta_get MBID)"
 	if {
 		{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; } ||
 		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
@@ -507,9 +555,8 @@ function cd_encode {
 		}; then
 			return 1
 		fi
-		echo "${ID_MBID}" >_id.mbid
+		meta_set MBID ${ID_MBID}
 	fi
-	run_cmd "${FUNCNAME}: output" cat _id.mbid
 	if {
 		{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; } ||
 		{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; };
@@ -530,6 +577,9 @@ function cd_encode {
 		fi
 	fi
 
+	ID_FCVR="$(meta_get FCVR)"
+	ID_BCVR="$(meta_get BCVR)"
+	ID_MCVR="$(meta_get MCVR)"
 	if {
 		[[ ! -f $(${LS} _image.${ID_CNUM}.[0-9-]*) ]] &&
 		[[ ${ID_COGS} != null ]] &&
@@ -590,13 +640,14 @@ function cd_encode {
 	fi
 	if {
 		[[ ! -s _image.icon.png		]] ||
-		[[ ! -s _image.front.jpg	]] ||
-		[[ ! -s _image.back.jpg		]] ||
-		[[ ! -s _image.media.jpg	]];
+		{ [[ ! -s _image.front.jpg	]] || [[ $(realpath --relative-to="." _image.front.jpg)	!= $(realpath --relative-to="." ${ID_FCVR}) ]]; } ||
+		{ [[ ! -s _image.back.jpg	]] || [[ $(realpath --relative-to="." _image.back.jpg)	!= $(realpath --relative-to="." ${ID_BCVR}) ]]; } ||
+		{ [[ ! -s _image.media.jpg	]] || [[ $(realpath --relative-to="." _image.media.jpg)	!= $(realpath --relative-to="." ${ID_MCVR}) ]]; };
 	}; then
 		run_cmd "${FUNCNAME}: images"
 		function image_select {
 			declare IMG="${1}" && shift
+			declare CVR="${1}" && shift
 			declare VAL="${1}" && shift
 			echo -en "\n"
 			if [[ -s _image.${IMG}.jpg ]]; then
@@ -613,6 +664,7 @@ function cd_encode {
 				read -p "IMAGE (${IMG})> " FILE
 				if [[ -s ${FILE} ]]; then
 					${LN} ${FILE} _image.${IMG}.jpg
+					meta_set ${CVR} ${FILE}
 				fi
 			fi
 			return 0
@@ -622,9 +674,9 @@ function cd_encode {
 			echo -en "${FILE}\n"
 		done
 		echo -en "_image.front.jpg\n"
-		image_select front	|| return 1
-		image_select back	|| return 1
-		image_select media	|| return 1
+		image_select front	FCVR ${ID_FCVR}; ID_FCVR="$(meta_get FCVR)"
+		image_select back	BCVR ${ID_BCVR}; ID_BCVR="$(meta_get BCVR)"
+		image_select media	MCVR ${ID_MCVR}; ID_MCVR="$(meta_get MCVR)"
 		echo -en "\n"
 		if {
 			[[ ! -s _image.front.jpg	]] ||
@@ -642,8 +694,8 @@ function cd_encode {
 	fi
 #>>>	run_cmd "${FUNCNAME}: output" ${LL} _image.*
 
-	ID_NAME="$(cat _metadata.name)"
-	if [[ ! -s _metadata ]]; then
+	ID_NAME="$(meta_get NAME)"
+	if [[ -z $(meta_get TITL) ]]; then
 		run_cmd "${FUNCNAME}: metadata"
 		declare TITL="$(jq --raw-output '.title'			id.${ID_MBID}.json)"
 		declare YEAR="$(jq --raw-output '.date'				id.${ID_MBID}.json | ${SED} "s|-.+||g")"
@@ -670,56 +722,78 @@ function cd_encode {
 			fi
 			FILE="$((${FILE}+1))"
 		done
-		run_cmd "${FUNCNAME}: metadata"
-		${RSYNC_U} audio.cue _metadata
-		${SED} -i \
-			-e "/^REM/d" \
-			-e "s|^(CATALOG)|$(
-				echo -en "TITLE \\\"${TITL}\\\"\\\n"
-				echo -en "PERFORMER \\\"${ARTS}\\\"\\\n"
-				echo -en "REM ${YEAR}\\\n"
-			)\1|g" \
-			_metadata
+		echo -en "TITL: ${TITL}\n"				| tee -a .metadata
+		echo -en "ARTS: ${ARTS}\n"				| tee -a .metadata
+		echo -en "YEAR: ${YEAR}\n"				| tee -a .metadata
+		echo -en "TRCK: ${TRCK}\n"				| tee -a .metadata
 		FILE="1"
 		while (( ${FILE} <= ${TRCK} )); do
 			if [[ ${FILE} != [0-9][0-9] ]]; then
 				FILE="0${FILE}"
 			fi
-			${SED} -i "s|^(  TRACK ${FILE} AUDIO)$|\1$(
-				echo -en "\\\n    TITLE \"${TTL[${NUM/#0}]}\""
-				echo -en "\\\n    PERFORMER \"${ART[${NUM/#0}]}\""
-			)|g" \
-			_metadata
+			echo -en "${FILE}_T: ${TTL[${FILE/#0}]}\n"	| tee -a .metadata
+			echo -en "${FILE}_A: ${ART[${FILE/#0}]}\n"	| tee -a .metadata
 			FILE="$(expr ${FILE} + 1)"
 		done
-		${EDITOR} _metadata
 	fi
 	if {
 		[[ -z $(echo "${ID_NAME}" | ${GREP} -o "^${ID_NAME_CHARS}$") ]] &&
 		[[ ${ID_NAME} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: metadata"
-		ID_NAME="$(
-			namer "$(${SED} -n "s|^PERFORMER \"(.+)\"$|\1|gp" _metadata)"
-		).$(
-			namer "$(${SED} -n "s|^TITLE \"(.+)\"$|\1|gp" _metadata)"
-		).$(
-			namer "$(${SED} -n "s|^REM ([0-9]{4})$|\1|gp" _metadata)"
-		)"
+		ID_NAME="$(namer "$(meta_get ARTS).$(meta_get TITL).$(meta_get YEAR)")"
 		ID_NAME="$(echo "${ID_NAME}" | ${SED} "s|^$(namer "${FLAC_MANY}")\.||g")"
-		echo "${ID_NAME}" >_metadata.name
-		${EDITOR} _metadata.name
+		meta_set NAME ${ID_NAME}
 	fi
-	if [[ ! -s _metadata.tags ]]; then
+	if {
+		[[ -z $(meta_get TITL) ]] ||
+		[[ ! -f _metadata ]];
+	}; then
+		run_cmd "${FUNCNAME}: metadata"
+		${EDITOR} .metadata
+	fi
+
+	if {
+		[[ ! -f _metadata ]] ||
+		[[ -n $(find .metadata -newer _metadata 2>/dev/null) ]];
+	}; then
+		run_cmd "${FUNCNAME}: metadata"
+		${RSYNC_U} audio.cue _metadata
+		${SED} -i \
+			-e "/^REM/d" \
+			-e "s|^(CATALOG)|$(
+				echo -en "TITLE \\\"$(meta_get TITL)\\\"\\\n"
+				echo -en "PERFORMER \\\"$(meta_get ARTS)\\\"\\\n"
+				echo -en "REM $(meta_get YEAR)\\\n"
+			)\1|g" \
+			_metadata
+		FILE="1"
+		while (( ${FILE} <= $(meta_get TRCK) )); do
+			if [[ ${FILE} != [0-9][0-9] ]]; then
+				FILE="0${FILE}"
+			fi
+			${SED} -i "s|^(  TRACK ${FILE} AUDIO)$|\1$(
+				echo -en "\\\n    TITLE \"$(meta_get ${FILE}_T)\""
+				echo -en "\\\n    PERFORMER \"$(meta_get ${FILE}_A)\""
+			)|g" \
+			_metadata
+			FILE="$(expr ${FILE} + 1)"
+		done
+		touch -r .metadata _metadata
+	fi
+	if {
+		[[ ! -f _metadata.tags ]] ||
+		[[ -n $(find .metadata.tags -newer _metadata 2>/dev/null) ]];
+	}; then
 		run_cmd "${FUNCNAME}: metadata"
 		cat /dev/null									>_metadata.tags
 		echo -en "VERSION=${DATE}"							>>_metadata.tags
 		[[ ${DATE} != $(cat .exported) ]] && echo -en " ($(cat .exported))"		>>_metadata.tags
 		echo -en "\n"									>>_metadata.tags
-		echo -en "TITLE=${ARTS}${FLAC_TDIV//\\}${TITL}\n"				>>_metadata.tags
-		echo -en "ALBUM=${TITL}\n"							>>_metadata.tags
-		echo -en "ARTIST=${ARTS}\n"							>>_metadata.tags
-		echo -en "DATE=${YEAR}\n"							>>_metadata.tags
+		echo -en "TITLE=$(meta_get ARTS)${FLAC_TDIV//\\}$(meta_get TITL)\n"		>>_metadata.tags
+		echo -en "ALBUM=$(meta_get TITL)\n"						>>_metadata.tags
+		echo -en "ARTIST=$(meta_get ARTS)\n"						>>_metadata.tags
+		echo -en "DATE=$(meta_get YEAR)\n"						>>_metadata.tags
 		FILE="1"
 		while (( ${FILE} <= $(meta_get TRCK) )); do
 			if [[ ${FILE} != [0-9][0-9] ]]; then
@@ -731,17 +805,17 @@ function cd_encode {
 			)\n"									>>_metadata.tags
 			echo -en "CHAPTER0${FILE}NAME="						>>_metadata.tags
 			echo -en "${FILE}${FLAC_NDIV//\\}"					>>_metadata.tags
-			echo -en "${TTL[${FILE/#0}]}${FLAC_TDIV//\\}${ART[${FILE/#0}]}"		>>_metadata.tags
+			echo -en "$(meta_get ${FILE}_T)${FLAC_TDIV//\\}$(meta_get ${FILE}_A)"	>>_metadata.tags
 			echo -en "\n"								>>_metadata.tags
 			FILE="$(expr ${FILE} + 1)"
 		done
-		if [[ $(${SED} -n "s|^PERFORMER \"(.+)\"$|\1|gp" _metadata) == ${FLAC_MANY} ]]; then
+		if [[ $(meta_get ARTS) == ${FLAC_MANY} ]]; then
 			${SED} -i "s|^(TITLE=)${FLAC_MANY}${FLAC_TDIV}|\1|g"			_metadata.tags
 		else
 			${SED} -i "s|^(CHAPTER0.+)${FLAC_TDIV}.+$|\1|g"				_metadata.tags
 		fi
+		touch -r .metadata _metadata.tags
 	fi
-	run_cmd "${FUNCNAME}: output" cat _metadata.name
 	run_cmd "${FUNCNAME}: output" cueprint --input-format cue _metadata
 	run_cmd "${FUNCNAME}: output" cat _metadata
 	run_cmd "${FUNCNAME}: output" cat _metadata.tags
@@ -887,6 +961,21 @@ function flac_unpack {
 			--export-picture-to=- \
 			${UNPACK} \
 			| tar --xz -tvv -f -
+		run_cmd "${FUNCNAME}" metaflac \
+			--block-number="${FLAC_BLCK}" \
+			--export-picture-to=- \
+			${UNPACK} \
+			| tar --xz -xvv -f - -O .metadata
+		return 0
+	fi
+	if [[ ${ADDARG} == -x ]]; then
+		run_cmd "${FUNCNAME}" metaflac \
+			--block-number="${FLAC_BLCK}" \
+			--export-picture-to=- \
+			${UNPACK} \
+			| tar --xz -xvv -f - -O .metadata \
+			>${UNPACK}.metadata
+		run_cmd "${FUNCNAME}" cat ${UNPACK}.metadata
 		return 0
 	fi
 	if [[ ! -d ${UNPACK}.dir ]]; then
@@ -903,7 +992,7 @@ function flac_unpack {
 		(cd ${UNPACK}.dir && run_cmd "${FUNCNAME}" ${FLAC_HASH} --check _checksum)		|| return 1
 	fi
 	declare DESTNAME="$(realpath ${ADDARG} 2>/dev/null)"
-	declare BASENAME="$(cat ${UNPACK}.dir/_metadata.name)"
+	declare BASENAME="$(meta_get ${UNPACK}.dir/.metadata NAME)"
 	if [[ ${1} == +([0-9]) ]]; then
 		shopt -s lastpipe
 		while [[ ${1} == +([0-9]) ]]; do
