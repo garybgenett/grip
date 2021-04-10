@@ -642,58 +642,62 @@ function cd_encode {
 	fi
 #>>>	run_cmd "${FUNCNAME}: output" ${LL} _image.*
 
+	ID_NAME="$(cat _metadata.name)"
 	if [[ ! -s _metadata ]]; then
 		run_cmd "${FUNCNAME}: metadata"
-		${RSYNC_U} audio.cue _metadata.edit
-		declare MULTI="false"
-		declare TRCKS=($(jq --raw-output '.media[].tracks[] | .position'						id.${ID_MBID}.json))
-		declare TITLE="$(jq --raw-output '.title'									id.${ID_MBID}.json)"
-		declare RYEAR="$(jq --raw-output '.date'									id.${ID_MBID}.json | ${SED} "s|-.+||g")"
-		declare PRFMR=
-		declare -a TITLES
-		declare -a PRFMRS
-		for FILE in ${TRCKS[@]}; do
-			TITLES[${FILE}]="$(jq --raw-output '.media[].tracks[] | select(.position == '${FILE}') | .title'	id.${ID_MBID}.json)"
-			PRFMRS[${FILE}]="$(
-				declare NUM="0"
-				declare -a ARTISTS
-				shopt -s lastpipe
-				jq --raw-output '.media[].tracks[] | select(.position == '${FILE}') | ."artist-credit"[].name'	id.${ID_MBID}.json |
-					while read -r FILE; do
-						ARTISTS[${NUM}]="${FILE}"
-						NUM="$((${NUM}+1))"
-					done
-				if (( ${#ARTISTS[@]} > 1 )); then
-					for FILE in "${ARTISTS[@]}"; do
-						echo -en "${FILE}${FLAC_ADIV//\\}"
-					done | ${SED} "s|${FLAC_ADIV}$||g"
-				else
-					echo -en "${ARTISTS[0]}"
-				fi
-			)"
-			if {
-				(( ${FILE} > 1 )) &&
-				[[ ${PRFMRS[$FILE]} != ${PRFMRS[$((${FILE}-1))]} ]];
-			}; then
-				MULTI="true"
-			fi
-		done
-		if ! ${MULTI}; then
-			PRFMR="${PRFMRS[1]}"
-		else
-			PRFMR="${FLAC_MANY}"
+		declare TITL="$(jq --raw-output '.title'			id.${ID_MBID}.json)"
+		declare YEAR="$(jq --raw-output '.date'				id.${ID_MBID}.json | ${SED} "s|-.+||g")"
+		declare TRCK="$(jq --raw-output '.media[].tracks[] | .position'	id.${ID_MBID}.json | sort -n | tail -n1)"
+		if [[ -z ${TRCK} ]]; then
+			TRCK=1
 		fi
+		declare -a TTL
+		declare -a ART
+		FILE="1"
+		while (( ${FILE} <= ${TRCK} )); do
+			TTL[${FILE}]="$(jq --raw-output '.media[].tracks[] | select(.position == '${FILE}') | .title'			id.${ID_MBID}.json)"
+			ART[${FILE}]="$(jq --raw-output '.media[].tracks[] | select(.position == '${FILE}') | ."artist-credit"[].name'	id.${ID_MBID}.json |
+				tr '\n' '^' |
+				${SED} "s|\^|${FLAC_ADIV}|g" |
+				${SED} "s|${FLAC_ADIV}$||g"
+			)"
+			if [[ ${FILE} == 1 ]]; then
+				ARTS="${ART[${FILE}]}"
+			else
+				if [[ ${ARTS} != ${ART[${FILE}]} ]]; then
+					ARTS="${FLAC_MANY}"
+				fi
+			fi
+			FILE="$((${FILE}+1))"
+		done
+		run_cmd "${FUNCNAME}: metadata"
+		${RSYNC_U} audio.cue _metadata
 		${SED} -i \
 			-e "/^REM/d" \
-			-e "s|^(CATALOG)|TITLE \"${TITLE}\"\nPERFORMER \"${PRFMR}\"\nREM ${RYEAR}\n\1|g" \
-			_metadata.edit
-		for FILE in ${TRCKS[@]}; do
-			${SED} -i "s|^(  TRACK 0?${FILE} AUDIO)$|\1\n    TITLE \"${TITLES[$FILE]}\"\n    PERFORMER \"${PRFMRS[$FILE]}\"|g" _metadata.edit
+			-e "s|^(CATALOG)|$(
+				echo -en "TITLE \\\"${TITL}\\\"\\\n"
+				echo -en "PERFORMER \\\"${ARTS}\\\"\\\n"
+				echo -en "REM ${YEAR}\\\n"
+			)\1|g" \
+			_metadata
+		FILE="1"
+		while (( ${FILE} <= ${TRCK} )); do
+			if [[ ${FILE} != [0-9][0-9] ]]; then
+				FILE="0${FILE}"
+			fi
+			${SED} -i "s|^(  TRACK ${FILE} AUDIO)$|\1$(
+				echo -en "\\\n    TITLE \"${TTL[${NUM/#0}]}\""
+				echo -en "\\\n    PERFORMER \"${ART[${NUM/#0}]}\""
+			)|g" \
+			_metadata
+			FILE="$(expr ${FILE} + 1)"
 		done
-		${MV} _metadata.edit _metadata
 		${EDITOR} _metadata
 	fi
-	if [[ ! -s _metadata.name ]]; then
+	if {
+		[[ -z $(echo "${ID_NAME}" | ${GREP} -o "^${ID_NAME_CHARS}$") ]] &&
+		[[ ${ID_NAME} != null ]];
+	}; then
 		run_cmd "${FUNCNAME}: metadata"
 		ID_NAME="$(
 			namer "$(${SED} -n "s|^PERFORMER \"(.+)\"$|\1|gp" _metadata)"
@@ -706,37 +710,35 @@ function cd_encode {
 		echo "${ID_NAME}" >_metadata.name
 		${EDITOR} _metadata.name
 	fi
-	ID_NAME="$(cat _metadata.name)"
-	if {
-		[[ -z $(echo "${ID_NAME}" | ${GREP} -o "^${ID_NAME_CHARS}$") ]] ||
-		[[ -n $(echo "${ID_NAME}" | ${GREP} "^[./]+") ]];
-	}; then
-		return 1
-	fi
 	if [[ ! -s _metadata.tags ]]; then
 		run_cmd "${FUNCNAME}: metadata"
-		echo -en "VERSION=${DATE}"										>>_metadata.tags
-		[[ ${DATE} != $(cat .exported) ]] && echo -en " ($(cat .exported))"					>>_metadata.tags
-		echo -en "\n"												>>_metadata.tags
-		echo -en "TITLE="		>>_metadata.tags;	${SED} -n "s|^PERFORMER \"(.+)\"$|\1|gp"	_metadata | tr -d '\n' >>_metadata.tags
-		echo -en "${FLAC_TDIV//\\}"	>>_metadata.tags;	${SED} -n "s|^TITLE \"(.+)\"$|\1|gp"		_metadata | tr -d '\n' >>_metadata.tags
-		echo -en "\n"												>>_metadata.tags
-		echo -en "ALBUM="		>>_metadata.tags;	${SED} -n "s|^TITLE \"(.+)\"$|\1|gp"		_metadata >>_metadata.tags
-		echo -en "ARTIST="		>>_metadata.tags;	${SED} -n "s|^PERFORMER \"(.+)\"$|\1|gp"	_metadata >>_metadata.tags
-		echo -en "DATE="		>>_metadata.tags;	${SED} -n "s|^REM ([0-9]{4})$|\1|gp"		_metadata >>_metadata.tags
-		for FILE in $(
-			${SED} -n "s|^ +TRACK ([0-9]+) AUDIO$|\1|gp" _metadata
-		); do
-			${GREP} -A4 "^ +TRACK ${FILE} AUDIO$" _metadata |
-				tr -d '\n' |
-				${SED} "s|$|\n|g" |
-				${SED} "s|^.+TITLE \"([^\"]+)\".+PERFORMER \"([^\"]+)\".+INDEX 01 ([0-9]{2}):([0-9]{2}):([0-9]{2}).*$|CHAPTER0${FILE}=00:\3:\4.000\nCHAPTER0${FILE}NAME=${FILE}${FLAC_NDIV}\1${FLAC_TDIV}\2|g" |
-				cat >>_metadata.tags
+		cat /dev/null									>_metadata.tags
+		echo -en "VERSION=${DATE}"							>>_metadata.tags
+		[[ ${DATE} != $(cat .exported) ]] && echo -en " ($(cat .exported))"		>>_metadata.tags
+		echo -en "\n"									>>_metadata.tags
+		echo -en "TITLE=${ARTS}${FLAC_TDIV//\\}${TITL}\n"				>>_metadata.tags
+		echo -en "ALBUM=${TITL}\n"							>>_metadata.tags
+		echo -en "ARTIST=${ARTS}\n"							>>_metadata.tags
+		echo -en "DATE=${YEAR}\n"							>>_metadata.tags
+		FILE="1"
+		while (( ${FILE} <= $(meta_get TRCK) )); do
+			if [[ ${FILE} != [0-9][0-9] ]]; then
+				FILE="0${FILE}"
+			fi
+			echo -en "CHAPTER0${FILE}=$(
+				${GREP} -A2 "^  TRACK ${FILE} AUDIO$" audio.cue |
+				${SED} -n "s|^    INDEX 01 ([0-9]{2}):([0-9]{2}):([0-9]{2}).*$|00:\1:\2.000|gp"
+			)\n"									>>_metadata.tags
+			echo -en "CHAPTER0${FILE}NAME="						>>_metadata.tags
+			echo -en "${FILE}${FLAC_NDIV//\\}"					>>_metadata.tags
+			echo -en "${TTL[${FILE/#0}]}${FLAC_TDIV//\\}${ART[${FILE/#0}]}"		>>_metadata.tags
+			echo -en "\n"								>>_metadata.tags
+			FILE="$(expr ${FILE} + 1)"
 		done
 		if [[ $(${SED} -n "s|^PERFORMER \"(.+)\"$|\1|gp" _metadata) == ${FLAC_MANY} ]]; then
-			${SED} -i "s|^(TITLE=)${FLAC_MANY}${FLAC_TDIV}|\1|g" _metadata.tags
+			${SED} -i "s|^(TITLE=)${FLAC_MANY}${FLAC_TDIV}|\1|g"			_metadata.tags
 		else
-			${SED} -i "s|^(CHAPTER0.+)${FLAC_TDIV}.+$|\1|g" _metadata.tags
+			${SED} -i "s|^(CHAPTER0.+)${FLAC_TDIV}.+$|\1|g"				_metadata.tags
 		fi
 	fi
 	run_cmd "${FUNCNAME}: output" cat _metadata.name
