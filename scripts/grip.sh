@@ -114,18 +114,21 @@ fi
 ################################################################################
 
 function run_cmd {
-	declare COMMAND="${1}" && shift
+	declare MARKER="${1}" && shift
 	echo -en "\e]0;"			1>&2
-	echo -en "$(basename ${0}): ${COMMAND}"	1>&2
+	echo -en "$(basename ${0}): ${MARKER}"	1>&2
 	echo -en "\a"				1>&2
-	echo -en "\n"		1>&2
-	printf "=%.0s" {1..80}	1>&2
-	echo -en "\n"		1>&2
-	echo -en "=== "		1>&2
-	echo -en "${@}"		1>&2
-	echo -en "\n"		1>&2
-	printf "=%.0s" {1..80}	1>&2
-	echo -en "\n"		1>&2
+	echo -en "\n"				1>&2
+	printf "=%.0s" {1..80}			1>&2
+	echo -en "\n"				1>&2
+	if [[ -n ${@} ]]; then
+		echo -en "=== ${@}"		1>&2
+	else
+		echo -en "--- ${MARKER} ---"	1>&2
+	fi
+	echo -en "\n"				1>&2
+	printf "=%.0s" {1..80}			1>&2
+	echo -en "\n"				1>&2
 	"${@}" || return 1
 	return 0
 }
@@ -295,8 +298,8 @@ function cd_encode {
 			.id.code
 			_audio.cue
 		"
-		run_cmd "${FUNCNAME}: reset" ${LL} --directory ${SAFE_LIST}
-		run_cmd "${FUNCNAME}: reset" ${LL} --directory $(
+		run_cmd "${FUNCNAME}" ${LL} --directory ${SAFE_LIST}
+		run_cmd "${FUNCNAME}" ${LL} --directory $(
 			eval find ./ -mindepth 1 -maxdepth 1 $(
 				for FILE in ${SAFE_LIST}; do
 					echo "\\( -path ./${FILE} -prune \\) -o "
@@ -313,6 +316,7 @@ function cd_encode {
 		[[ ! -s audio.cue	]] ||
 		[[ ! -s audio.wav	]];
 	}; then
+		run_cmd "${FUNCNAME}: audio"
 		cat /dev/null >.audio.log
 		run_cmd "${FUNCNAME}: audio" $(which cdparanoia)	--version	2>&1 | tee -a .audio.log
 		run_cmd "${FUNCNAME}: audio" $(which cdda2wav)		--version	2>&1 | tee -a .audio.log
@@ -334,13 +338,14 @@ function cd_encode {
 			-device ${SOURCE} \
 			2>&1 | tee -a .audio.log
 			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
-		run_cmd "${FUNCNAME}: audio" ${RSYNC_U} audio.cue .audio.cue	|| return 1
-		${SED} -i "/^REM/d" audio.cue					|| return 1
-		run_cmd "${FUNCNAME}: audio" ${RSYNC_U} audio.cue _audio.cue	|| return 1
+		run_cmd "${FUNCNAME}: audio"
+		${RSYNC_U} audio.cue .audio.cue	|| return 1
+		${SED} -i "/^REM/d" audio.cue	|| return 1
+		${RSYNC_U} audio.cue _audio.cue	|| return 1
 		echo "${DATE}" >.exported
 	fi
-	if ! run_cmd "${FUNCNAME}: audio" diff ${DIFF_OPTS} .audio.cue audio.cue; then
-		if ! run_cmd "${FUNCNAME}: audio" diff ${DIFF_OPTS} _audio.cue audio.cue; then
+	if ! run_cmd "${FUNCNAME}: output" diff ${DIFF_OPTS} .audio.cue audio.cue; then
+		if ! run_cmd "${FUNCNAME}: output" diff ${DIFF_OPTS} _audio.cue audio.cue; then
 			return 1
 		fi
 	elif ${LL} _audio.cue 2>/dev/null; then
@@ -349,8 +354,8 @@ function cd_encode {
 
 	ID_DISC="$(head -n1 .id.disc 2>/dev/null)"
 	if [[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]]; then
-#>>>		run_cmd "${FUNCNAME}: disc" $(which cdda2wav) -info-only -device ${SOURCE} #>>> || return 1
-		run_cmd "${FUNCNAME}: disc" echo $(which cdda2wav) -info-only -device ${SOURCE} #>>> || return 1
+		run_cmd "${FUNCNAME}: disc"
+		echo -en "$(which cdda2wav) -info-only -device ${SOURCE}\n"
 		if [[ -n ${ID_DISC} ]]; then
 			echo -en "CDINDEX[${ID_DISC}]\n"
 		fi
@@ -367,7 +372,7 @@ function cd_encode {
 		[[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]] &&
 		[[ ${ID_CODE} != null ]];
 	}; then
-		run_cmd "${FUNCNAME}: code" ${GREP} --color=never "^CATALOG " audio.cue
+		run_cmd "${FUNCNAME}: code"
 		ID_CODE="$(${SED} -n "s|^CATALOG (.+)$|\1|gp" audio.cue)"
 		if [[ -n ${ID_CODE} ]]; then
 			echo -en "BARCODE[${ID_CODE}]\n"
@@ -379,7 +384,7 @@ function cd_encode {
 			fi
 			if [[ -z $(${GREP} "^CATALOG " audio.cue) ]]; then
 				${SED} -i "s|^(FILE .+$)$|CATALOG ${ID_CODE}\n\1|g" audio.cue
-				run_cmd "${FUNCNAME}: code" ${RSYNC_U} audio.cue _audio.cue || return 1
+				${RSYNC_U} audio.cue _audio.cue || return 1
 			fi
 		fi
 		echo "${ID_CODE}" >.id.code
@@ -391,7 +396,7 @@ function cd_encode {
 		[[ -z ${ID_URL} ]] &&
 		[[ ${ID_URL} != null ]];
 	}; then
-		run_cmd "${FUNCNAME}: url" ${GREP} --color=never "^CATALOG " audio.cue
+		run_cmd "${FUNCNAME}: cogs"
 		echo -en "URL: https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
 		read -p "URL: " ID_URL
 		if [[ ${ID_URL} != null ]]; then
@@ -399,7 +404,7 @@ function cd_encode {
 				return 1
 			fi
 			ID_URL_NUM="$(echo "${ID_URL}" | ${SED} "s|^.+/([^/]+)$|\1|g")"
-			run_cmd "${FUNCNAME}: code" ${WGET_C} --output-document="id.${ID_URL_NUM}.html" "${ID_URL}" || return 1
+			run_cmd "${FUNCNAME}: cogs" ${WGET_C} --output-document="id.${ID_URL_NUM}.html" "${ID_URL}" || return 1
 			strip_file id.${ID_URL_NUM}.html
 			if [[ ! -s id.${ID_URL_NUM}.html ]]; then
 				${LL} id.${ID_URL_NUM}.html*
@@ -416,6 +421,7 @@ function cd_encode {
 		[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]] &&
 		[[ ${ID_MBID} != null ]];
 	}; then
+		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.code.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"	#>>> || return 1
 		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.disc.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"						#>>> || return 1
 		strip_file id.code.html
@@ -428,6 +434,7 @@ function cd_encode {
 			${LL} id.disc.html*
 			return 1
 		fi
+		run_cmd "${FUNCNAME}: mbid"
 		declare ID_MBIDS=($(
 			${SED} "s|(<a href=\"/release/${ID_MBID_CHARS}\")|\n\1|g" id.code.html id.disc.html |
 			${SED} -n "s|^.+/release/(${ID_MBID_CHARS}).+>([A-Z]{2})<.+$|\2:\1|gp" |
@@ -467,7 +474,7 @@ function cd_encode {
 	run_cmd "${FUNCNAME}: output" cat _id.mbid
 
 	if [[ ! -s _image.icon.png ]]; then
-		run_cmd "${FUNCNAME}: images" ${LL} _image.*
+		run_cmd "${FUNCNAME}: images"
 		if {
 			[[ ! -f $(${LS} _image.${ID_URL_NUM}.[0-9-]*) ]] &&
 			[[ ${ID_URL} != null ]];
@@ -538,6 +545,7 @@ function cd_encode {
 			done
 			touch _image.${ID_MBID}.${DATE}
 		fi
+		run_cmd "${FUNCNAME}: images"
 		function image_select {
 			declare IMAGE="${1}" && shift
 			if [[ ! -s _image.${IMAGE}.jpg ]]; then
@@ -557,12 +565,12 @@ function cd_encode {
 		image_select front	|| return 1
 		image_select back	|| return 1
 		image_select media	|| return 1
-		run_cmd "${FUNCNAME}: images" ${LL} _image.*
 		if {
 			[[ ! -s _image.front.jpg	]] ||
 			[[ ! -s _image.back.jpg		]] ||
 			[[ ! -s _image.media.jpg	]];
 		}; then
+			${LL} _image.*
 			return 1
 		fi
 		if ! convert -verbose -background black -resize 32x32 -extent 32x32 _image.front.jpg _image.icon.png; then
@@ -570,9 +578,11 @@ function cd_encode {
 		fi
 		${IMAGE_CMD} _image.*.{png,jpg} 2>/dev/null || return 1
 	fi
+#>>>	run_cmd "${FUNCNAME}: output" ${LL} _image.*
 
 	if [[ ! -s _metadata ]]; then
-		run_cmd "${FUNCNAME}: metadata" ${RSYNC_U} audio.cue _metadata.edit
+		run_cmd "${FUNCNAME}: metadata"
+		${RSYNC_U} audio.cue _metadata.edit
 		declare MULTI="false"
 		declare TRCKS=($(jq --raw-output '.media[].tracks[] | .position'						id.${ID_MBID}.json))
 		declare TITLE="$(jq --raw-output '.title'									id.${ID_MBID}.json)"
@@ -621,8 +631,8 @@ function cd_encode {
 		${MV} _metadata.edit _metadata
 		${EDITOR} _metadata
 	fi
-
 	if [[ ! -s _metadata.name ]]; then
+		run_cmd "${FUNCNAME}: metadata"
 		OUTPUT="$(
 			namer "$(${SED} -n "s|^PERFORMER \"(.+)\"$|\1|gp" _metadata)"
 		).$(
@@ -634,8 +644,6 @@ function cd_encode {
 		echo "${OUTPUT}" >_metadata.name
 		${EDITOR} _metadata.name
 	fi
-
-	run_cmd "${FUNCNAME}: output" cat _metadata.name
 	OUTPUT="$(cat _metadata.name)"
 	if {
 		[[ -z ${OUTPUT} ]] ||
@@ -643,10 +651,8 @@ function cd_encode {
 	}; then
 		return 1
 	fi
-	run_cmd "${FUNCNAME}: output" cueprint --input-format cue _metadata
-	run_cmd "${FUNCNAME}: output" cat _metadata
-
 	if [[ ! -s _metadata.tags ]]; then
+		run_cmd "${FUNCNAME}: metadata"
 		echo -en "VERSION=${DATE}"										>>_metadata.tags
 		[[ ${DATE} != $(cat .exported) ]] && echo -en " ($(cat .exported))"					>>_metadata.tags
 		echo -en "\n"												>>_metadata.tags
@@ -671,8 +677,12 @@ function cd_encode {
 			${SED} -i "s|^(CHAPTER0.+)${FLAC_TDIV}.+$|\1|g" _metadata.tags
 		fi
 	fi
+	run_cmd "${FUNCNAME}: output" cat _metadata.name
+	run_cmd "${FUNCNAME}: output" cueprint --input-format cue _metadata
+	run_cmd "${FUNCNAME}: output" cat _metadata
 	run_cmd "${FUNCNAME}: output" cat _metadata.tags
 
+	run_cmd "${FUNCNAME}: encode"
 	declare TAGS="$(
 		cat _metadata.tags | while read -r FILE; do
 			echo "--tag=\"${FILE}\""
@@ -712,6 +722,7 @@ function cd_encode {
 		run_cmd "${FUNCNAME}: info" metaflac --export-tags-to=-		${OUTPUT}.flac || return 1
 	fi
 
+	run_cmd "${FUNCNAME}: archive"
 	if [[ ! -s ${OUTPUT}.tar.xz ]]; then
 		function tarfiles {
 			find ./ -maxdepth 1 ! -type d | ${SED} "s|^\./||g" | sort
@@ -738,6 +749,8 @@ function cd_encode {
 			${OUTPUT}.flac \
 			|| return 1
 	done
+
+	run_cmd "${FUNCNAME}: embed"
 	declare TGZ_LST="$(metaflac --list --block-type="PICTURE" --block-number="${FLAC_BLCK}" ${OUTPUT}.flac 2>/dev/null | ${SED} -n "s|^ +description: ||gp")"
 	declare TGZ_OUT="$(metaflac --block-number="${FLAC_BLCK}" --export-picture-to=- ${OUTPUT}.flac 2>/dev/null | ${FLAC_HASH} | ${GREP} -o "^${FLAC_HASH_CHARS}")"
 	declare TGZ_FIL="$(${FLAC_HASH} ${OUTPUT}.tar.xz | ${GREP} -o "^${FLAC_HASH_CHARS}")"
@@ -759,6 +772,7 @@ function cd_encode {
 			|| return 1
 	fi
 
+	run_cmd "${FUNCNAME}: validate"
 	if [[ ! -d ${OUTPUT}.flac.dir ]]; then
 		flac_unpack ${OUTPUT}.flac
 		if {
@@ -771,6 +785,7 @@ function cd_encode {
 		fi
 	fi
 
+	run_cmd "${FUNCNAME}: complete"
 	run_cmd "${FUNCNAME}: output" metaflac \
 		--block-number="${FLAC_BLCK}" \
 		--export-picture-to=- \
