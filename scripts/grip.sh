@@ -53,6 +53,9 @@ declare FLAC_HASH_CHARS="[0-9a-f]{40}"
 declare FLAC_HASH="sha1sum"
 declare FLAC_BLCK="8"
 
+declare ID_NAME_CHARS="[a-zA-Z0-9+_.-]+"
+declare ID_NAME=
+
 declare ID_DISC_CHARS="[a-zA-Z0-9_.-]{28}"
 declare ID_DISC=
 declare ID_CODE_CHARS="[0-9]{13}"
@@ -60,9 +63,11 @@ declare ID_CODE=
 declare ID_MBID_CHARS="[0-9a-f-]{36}"
 declare ID_MBID=
 
-declare ID_URL=
-declare ID_URL_NUM=
-declare ID_URL_IMG=
+declare ID_COGS_CHARS="https?://.+"
+declare ID_COGS=
+declare ID_CIMG_CHARS="https?://.+"
+declare ID_CIMG=
+declare ID_CNUM=
 
 ########################################
 
@@ -391,29 +396,32 @@ function cd_encode {
 	fi
 	run_cmd "${FUNCNAME}: output" cat .id.code
 
-	ID_URL="$(head -n1 _id.url 2>/dev/null)"
+	ID_COGS="$(head -n1 _id.url 2>/dev/null)"
+	ID_CNUM="${ID_COGS/#*\/}"
 	if {
-		[[ -z ${ID_URL} ]] &&
-		[[ ${ID_URL} != null ]];
+		[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
+		[[ ${ID_COGS} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: cogs"
 		echo -en "URL: https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
-		read -p "URL: " ID_URL
-		if [[ ${ID_URL} != null ]]; then
-			if [[ -z ${ID_URL} ]]; then
+		read -p "URL: " ID_COGS
+		if {
+			[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
+			[[ ${ID_COGS} != null ]];
+		}; then
+			if [[ -z ${ID_COGS} ]]; then
 				return 1
 			fi
-			ID_URL_NUM="$(echo "${ID_URL}" | ${SED} "s|^.+/([^/]+)$|\1|g")"
-			run_cmd "${FUNCNAME}: cogs" ${WGET_C} --output-document="id.${ID_URL_NUM}.html" "${ID_URL}" || return 1
-			strip_file id.${ID_URL_NUM}.html
-			if [[ ! -s id.${ID_URL_NUM}.html ]]; then
-				${LL} id.${ID_URL_NUM}.html*
+			ID_CNUM="${ID_COGS/#*\/}"
+			run_cmd "${FUNCNAME}: cogs" ${WGET_C} --output-document="id.${ID_CNUM}.html" "${ID_COGS}" || return 1
+			strip_file id.${ID_CNUM}.html
+			if [[ ! -s id.${ID_CNUM}.html ]]; then
+				${LL} id.${ID_CNUM}.html*
 				return 1
 			fi
 		fi
-		echo "${ID_URL}" >_id.url
+		echo "${ID_COGS}" >_id.url
 	fi
-	ID_URL_NUM="$(echo "${ID_URL}" | ${SED} "s|^.+/([^/]+)$|\1|g")"
 	run_cmd "${FUNCNAME}: output" cat _id.url
 
 	ID_MBID="$(head -n1 _id.mbid 2>/dev/null)"
@@ -481,35 +489,35 @@ function cd_encode {
 	}; then
 		run_cmd "${FUNCNAME}: images"
 		if {
-			[[ ! -f $(${LS} _image.${ID_URL_NUM}.[0-9-]*) ]] &&
-			[[ ${ID_URL} != null ]];
+			[[ ! -f $(${LS} _image.${ID_CNUM}.[0-9-]*) ]] &&
+			[[ ${ID_COGS} != null ]];
 		}; then
-			ID_URL_IMG="$(head -n2 _id.url 2>/dev/null | tail -n1)"
+			ID_CIMG="$(head -n2 _id.url 2>/dev/null | tail -n1)"
 			if {
-				[[ -z ${ID_URL_IMG} ]] ||
+				[[ -z $(echo "${ID_CIMG}" | ${GREP} -o "^${ID_CIMG_CHARS}$") ]] ||
 				[[ $(wc -l _id.url 2>/dev/null | ${SED} "s|^([0-9]+).*$|\1|g") == 1 ]];
 			}; then
-				echo -en "URL (image): ${ID_URL}\n"
-				read -p "URL (image): " ID_URL_IMG
-				if [[ -n ${ID_URL_IMG} ]]; then
-					echo "${ID_URL}"	>_id.url
-					echo "${ID_URL_IMG}"	>>_id.url
+				echo -en "URL (image): ${ID_COGS}\n"
+				read -p "URL (image): " ID_CIMG
+				if [[ -n $(echo "${ID_CIMG}" | ${GREP} -o "^${ID_CIMG_CHARS}$") ]]; then
+					echo "${ID_COGS}"	>_id.url
+					echo "${ID_CIMG}"	>>_id.url
 				fi
 			fi
-			if [[ -z ${ID_URL_IMG} ]]; then
+			if [[ -z ${ID_CIMG} ]]; then
 				return 1
 			fi
-			run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_URL_NUM}.html"				"${ID_URL_IMG}" #>>> || return 1
-			strip_file image.${ID_URL_NUM}.html
-			if { [[ ! -s image.${ID_URL_NUM}.html ]] && [[ ! -f image.${ID_URL_NUM}.html.null ]]; }; then
-				${LL} image.${ID_URL_NUM}.html*
+			run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_CNUM}.html"				"${ID_CIMG}" #>>> || return 1
+			strip_file image.${ID_CNUM}.html
+			if { [[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]]; }; then
+				${LL} image.${ID_CNUM}.html*
 				return 1
 			fi
 			declare IMGS=($(${SED} \
 					-e "s| \"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
 					-e "s|src=\"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
 					-e "s|content=\"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
-					image.${ID_URL_NUM}.html |
+					image.${ID_CNUM}.html |
 				${GREP} "^https://img.discogs.com/" |
 				${GREP} "quality\(90\)" |
 				${GREP} "format\(jpeg\)" |
@@ -525,7 +533,7 @@ function cd_encode {
 					run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${IMG}.jpg"			"${FILE}" || return 1
 				fi
 			done
-			touch _image.${ID_URL_NUM}.${DATE}
+			touch _image.${ID_CNUM}.${DATE}
 		fi
 		if {
 			[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]*) ]] &&
@@ -651,21 +659,21 @@ function cd_encode {
 	fi
 	if [[ ! -s _metadata.name ]]; then
 		run_cmd "${FUNCNAME}: metadata"
-		OUTPUT="$(
+		ID_NAME="$(
 			namer "$(${SED} -n "s|^PERFORMER \"(.+)\"$|\1|gp" _metadata)"
 		).$(
 			namer "$(${SED} -n "s|^TITLE \"(.+)\"$|\1|gp" _metadata)"
 		).$(
 			namer "$(${SED} -n "s|^REM ([0-9]{4})$|\1|gp" _metadata)"
 		)"
-		OUTPUT="$(echo "${OUTPUT}" | ${SED} "s|^$(namer "${FLAC_MANY}").||g")"
-		echo "${OUTPUT}" >_metadata.name
+		ID_NAME="$(echo "${ID_NAME}" | ${SED} "s|^$(namer "${FLAC_MANY}")\.||g")"
+		echo "${ID_NAME}" >_metadata.name
 		${EDITOR} _metadata.name
 	fi
-	OUTPUT="$(cat _metadata.name)"
+	ID_NAME="$(cat _metadata.name)"
 	if {
-		[[ -z ${OUTPUT} ]] ||
-		[[ -n $(echo "${OUTPUT}" | ${GREP} "^[./]+") ]];
+		[[ -z $(echo "${ID_NAME}" | ${GREP} -o "^${ID_NAME_CHARS}$") ]] ||
+		[[ -n $(echo "${ID_NAME}" | ${GREP} "^[./]+") ]];
 	}; then
 		return 1
 	fi
@@ -706,7 +714,7 @@ function cd_encode {
 			echo "--tag=\"${FILE}\""
 		done
 	)"
-	if [[ ! -s ${OUTPUT}.flac ]]; then
+	if [[ ! -s ${ID_NAME}.flac ]]; then
 		eval run_cmd "\"${FUNCNAME}: encode\"" flac \
 			${FLAC_OPTS} \
 			\
@@ -720,28 +728,28 @@ function cd_encode {
 			--picture="\"6||||_image.media.jpg\"" \
 			\
 			"${@}" \
-			--output-name="\"${OUTPUT}.flac\"" \
+			--output-name="\"${ID_NAME}.flac\"" \
 			audio.wav \
 			|| return 1
 	fi
 
-	if [[ -f ${OUTPUT}.flac ]]; then
-		if [[ ! -s ${OUTPUT}.wav ]]; then
-#>>>			run_cmd "${FUNCNAME}: verify"	flac --force --analyze	${OUTPUT}.flac || return 1
-#>>>			run_cmd "${FUNCNAME}: verify"	flac --force --test	${OUTPUT}.flac || return 1
-			run_cmd "${FUNCNAME}: verify"	flac --force --decode	${OUTPUT}.flac || return 1
-			if ! run_cmd "${FUNCNAME}: verify" diff ${DIFF_OPTS} ${OUTPUT}.wav audio.wav; then
+	if [[ -f ${ID_NAME}.flac ]]; then
+		if [[ ! -s ${ID_NAME}.wav ]]; then
+#>>>			run_cmd "${FUNCNAME}: verify"	flac --force --analyze	${ID_NAME}.flac || return 1
+#>>>			run_cmd "${FUNCNAME}: verify"	flac --force --test	${ID_NAME}.flac || return 1
+			run_cmd "${FUNCNAME}: verify"	flac --force --decode	${ID_NAME}.flac || return 1
+			if ! run_cmd "${FUNCNAME}: verify" diff ${DIFF_OPTS} ${ID_NAME}.wav audio.wav; then
 				return 1
 			fi
 		fi
-		run_cmd "${FUNCNAME}: info" ffmpeg -i				${OUTPUT}.flac #>>> || return 1
-		run_cmd "${FUNCNAME}: info" metaflac --list			${OUTPUT}.flac | ${GREP} -A4 "^METADATA" | ${GREP} -v "^--$" #>>> || return 1
-		run_cmd "${FUNCNAME}: info" metaflac --export-cuesheet-to=-	${OUTPUT}.flac || return 1
-		run_cmd "${FUNCNAME}: info" metaflac --export-tags-to=-		${OUTPUT}.flac || return 1
+		run_cmd "${FUNCNAME}: info" ffmpeg -i				${ID_NAME}.flac #>>> || return 1
+		run_cmd "${FUNCNAME}: info" metaflac --list			${ID_NAME}.flac | ${GREP} -A4 "^METADATA" | ${GREP} -v "^--$" #>>> || return 1
+		run_cmd "${FUNCNAME}: info" metaflac --export-cuesheet-to=-	${ID_NAME}.flac || return 1
+		run_cmd "${FUNCNAME}: info" metaflac --export-tags-to=-		${ID_NAME}.flac || return 1
 	fi
 
 	run_cmd "${FUNCNAME}: archive"
-	if [[ ! -s ${OUTPUT}.tar.xz ]]; then
+	if [[ ! -s ${ID_NAME}.tar.xz ]]; then
 		function tarfiles {
 			find ./ -maxdepth 1 ! -type d | ${SED} "s|^\./||g" | sort
 		}
@@ -749,55 +757,55 @@ function cd_encode {
 			| ${GREP} -v \
 				-e " _checksum" \
 				-e " audio_" \
-				-e " ${OUTPUT//+/\\+}" \
+				-e " ${ID_NAME//+/\\+}" \
 			| tee _checksum
 			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
 		run_cmd "${FUNCNAME}: archive" tar --xz -cvv \
 			--exclude="audio.*" \
 			--exclude="audio_*" \
-			--exclude="${OUTPUT}*" \
-			-f ${OUTPUT}.tar.xz $(tarfiles) \
+			--exclude="${ID_NAME}*" \
+			-f ${ID_NAME}.tar.xz $(tarfiles) \
 			|| return 1
 	fi
-	while [[ -n $(metaflac --list --block-type="PICTURE" --block-number="$((${FLAC_BLCK}+1))" ${OUTPUT}.flac 2>/dev/null) ]]; do
+	while [[ -n $(metaflac --list --block-type="PICTURE" --block-number="$((${FLAC_BLCK}+1))" ${ID_NAME}.flac 2>/dev/null) ]]; do
 		run_cmd "${FUNCNAME}: archive" metaflac \
 			--block-type="PICTURE" \
 			--block-number="$((${FLAC_BLCK}+1))" \
 			--remove \
-			${OUTPUT}.flac \
+			${ID_NAME}.flac \
 			|| return 1
 	done
 
 	run_cmd "${FUNCNAME}: embed"
-	declare TGZ_LST="$(metaflac --list --block-type="PICTURE" --block-number="${FLAC_BLCK}" ${OUTPUT}.flac 2>/dev/null | ${SED} -n "s|^ +description: ||gp")"
-	declare TGZ_OUT="$(metaflac --block-number="${FLAC_BLCK}" --export-picture-to=- ${OUTPUT}.flac 2>/dev/null | ${FLAC_HASH} | ${GREP} -o "^${FLAC_HASH_CHARS}")"
-	declare TGZ_FIL="$(${FLAC_HASH} ${OUTPUT}.tar.xz | ${GREP} -o "^${FLAC_HASH_CHARS}")"
+	declare TGZ_LST="$(metaflac --list --block-type="PICTURE" --block-number="${FLAC_BLCK}" ${ID_NAME}.flac 2>/dev/null | ${SED} -n "s|^ +description: ||gp")"
+	declare TGZ_OUT="$(metaflac --block-number="${FLAC_BLCK}" --export-picture-to=- ${ID_NAME}.flac 2>/dev/null | ${FLAC_HASH} | ${GREP} -o "^${FLAC_HASH_CHARS}")"
+	declare TGZ_FIL="$(${FLAC_HASH} ${ID_NAME}.tar.xz | ${GREP} -o "^${FLAC_HASH_CHARS}")"
 	if {
 		[[ ${TGZ_LST} != ${TGZ_OUT} ]] ||
 		[[ ${TGZ_LST} != ${TGZ_FIL} ]];
 	}; then
-		if [[ -n $(metaflac --list --block-type="PICTURE" --block-number="${FLAC_BLCK}" ${OUTPUT}.flac 2>/dev/null) ]]; then
+		if [[ -n $(metaflac --list --block-type="PICTURE" --block-number="${FLAC_BLCK}" ${ID_NAME}.flac 2>/dev/null) ]]; then
 			run_cmd "${FUNCNAME}: archive" metaflac \
 				--block-type="PICTURE" \
 				--block-number="${FLAC_BLCK}" \
 				--remove \
-				${OUTPUT}.flac \
+				${ID_NAME}.flac \
 				|| return 1
 		fi
 		run_cmd "${FUNCNAME}: archive" metaflac \
-			--import-picture-from="0|image/png|$(${FLAC_HASH} ${OUTPUT}.tar.xz | ${GREP} -o "^${FLAC_HASH_CHARS}")|32x32x32|${OUTPUT}.tar.xz" \
-			${OUTPUT}.flac \
+			--import-picture-from="0|image/png|$(${FLAC_HASH} ${ID_NAME}.tar.xz | ${GREP} -o "^${FLAC_HASH_CHARS}")|32x32x32|${ID_NAME}.tar.xz" \
+			${ID_NAME}.flac \
 			|| return 1
 	fi
 
 	run_cmd "${FUNCNAME}: validate"
-	if [[ ! -d ${OUTPUT}.flac.dir ]]; then
-		flac_unpack ${OUTPUT}.flac
+	if [[ ! -d ${ID_NAME}.flac.dir ]]; then
+		flac_unpack ${ID_NAME}.flac
 		if {
 			! run_cmd "${FUNCNAME}: unpack" diff ${DIFF_OPTS} -r \
 				--exclude="audio_*" \
-				--exclude="${OUTPUT}*" \
-				${PWD} ${OUTPUT}.flac.dir;
+				--exclude="${ID_NAME}*" \
+				${PWD} ${ID_NAME}.flac.dir;
 		}; then
 			return 1
 		fi
@@ -807,11 +815,11 @@ function cd_encode {
 	run_cmd "${FUNCNAME}: output" metaflac \
 		--block-number="${FLAC_BLCK}" \
 		--export-picture-to=- \
-		${OUTPUT}.flac \
+		${ID_NAME}.flac \
 		| tar --xz -tvv -f -
 #>>>	run_cmd "${FUNCNAME}: output" ${LL}
 	run_cmd "${FUNCNAME}: output" ${LL} $(find ./ -maxdepth 1 -empty | ${SED} "s|^\./||g" | sort)
-	run_cmd "${FUNCNAME}: output" ${DU} -cms ${OUTPUT}*
+	run_cmd "${FUNCNAME}: output" ${DU} -cms ${ID_NAME}*
 	return 0
 }
 
