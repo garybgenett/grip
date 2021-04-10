@@ -346,138 +346,122 @@ function cd_encode {
 		return 1
 	fi
 
+	ID_DISC="$(head -n1 .id.disc 2>/dev/null)"
 	if [[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]]; then
-		if [[ -s .id.disc ]]; then
-			ID_DISC="$(cat .id.disc)"
-		else
-#>>>			run_cmd "${FUNCNAME}: disc" $(which cdda2wav) -info-only -device ${SOURCE} #>>> || return 1
-			run_cmd "${FUNCNAME}: disc" echo $(which cdda2wav) -info-only -device ${SOURCE} #>>> || return 1
-			if [[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]]; then
-				if [[ -n ${ID_DISC} ]]; then
-					echo -en "CDINDEX[${ID_DISC}]\n"
-				fi
-				read -p "CDINDEX: " ID_DISC
-			fi
-			if [[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]]; then
-				return 1
-			fi
-			echo "${ID_DISC}" >.id.disc
+#>>>		run_cmd "${FUNCNAME}: disc" $(which cdda2wav) -info-only -device ${SOURCE} #>>> || return 1
+		run_cmd "${FUNCNAME}: disc" echo $(which cdda2wav) -info-only -device ${SOURCE} #>>> || return 1
+		if [[ -n ${ID_DISC} ]]; then
+			echo -en "CDINDEX[${ID_DISC}]\n"
 		fi
+		read -p "CDINDEX: " ID_DISC
+		if [[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]]; then
+			return 1
+		fi
+		echo "${ID_DISC}" >.id.disc
 	fi
 	run_cmd "${FUNCNAME}: output" cat .id.disc
 
+	ID_CODE="$(head -n1 .id.code 2>/dev/null)"
 	if {
 		[[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]] &&
 		[[ ${ID_CODE} != null ]];
 	}; then
-		if [[ -s .id.code ]]; then
-			ID_CODE="$(cat .id.code)"
-		else
-			run_cmd "${FUNCNAME}: code" ${GREP} --color=never "^CATALOG " audio.cue
-			ID_CODE="$(${SED} -n "s|^CATALOG (.+)$|\1|gp" audio.cue)"
-			if [[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]]; then
-				if [[ -n ${ID_CODE} ]]; then
-					echo -en "BARCODE[${ID_CODE}]\n"
-				fi
-				read -p "BARCODE: " ID_CODE
-			fi
-			if [[ ${ID_CODE} != null ]]; then
-				if [[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]]; then
-					return 1
-				fi
-				if [[ -z $(${GREP} "^CATALOG " audio.cue) ]]; then
-					${SED} -i "s|^(FILE .+$)$|CATALOG ${ID_CODE}\n\1|g" audio.cue
-					run_cmd "${FUNCNAME}: code" ${RSYNC_U} audio.cue _audio.cue || return 1
-				fi
-			fi
-			echo "${ID_CODE}" >.id.code
+		run_cmd "${FUNCNAME}: code" ${GREP} --color=never "^CATALOG " audio.cue
+		ID_CODE="$(${SED} -n "s|^CATALOG (.+)$|\1|gp" audio.cue)"
+		if [[ -n ${ID_CODE} ]]; then
+			echo -en "BARCODE[${ID_CODE}]\n"
 		fi
+		read -p "BARCODE: " ID_CODE
+		if [[ ${ID_CODE} != null ]]; then
+			if [[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]]; then
+				return 1
+			fi
+			if [[ -z $(${GREP} "^CATALOG " audio.cue) ]]; then
+				${SED} -i "s|^(FILE .+$)$|CATALOG ${ID_CODE}\n\1|g" audio.cue
+				run_cmd "${FUNCNAME}: code" ${RSYNC_U} audio.cue _audio.cue || return 1
+			fi
+		fi
+		echo "${ID_CODE}" >.id.code
 	fi
 	run_cmd "${FUNCNAME}: output" cat .id.code
 
+	ID_URL="$(head -n1 _id.url 2>/dev/null)"
 	if {
 		[[ -z ${ID_URL} ]] &&
 		[[ ${ID_URL} != null ]];
 	}; then
-		if [[ -s _id.url ]]; then
-			ID_URL="$(head -n1 _id.url)"
-		else
-			run_cmd "${FUNCNAME}: url" ${GREP} --color=never "^CATALOG " audio.cue
-			echo -en "URL: https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
-			read -p "URL: " ID_URL
-			if [[ ${ID_URL} != null ]]; then
-				if [[ -z ${ID_URL} ]]; then
-					return 1
-				fi
-				ID_URL_NUM="$(echo "${ID_URL}" | ${SED} "s|^.+/([^/]+)$|\1|g")"
-				run_cmd "${FUNCNAME}: code" ${WGET_C} --output-document="id.${ID_URL_NUM}.html" "${ID_URL}" || return 1
-				strip_file id.${ID_URL_NUM}.html
-				if [[ ! -s id.${ID_URL_NUM}.html ]]; then
-					${LL} id.${ID_URL_NUM}.html*
-					return 1
-				fi
+		run_cmd "${FUNCNAME}: url" ${GREP} --color=never "^CATALOG " audio.cue
+		echo -en "URL: https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
+		read -p "URL: " ID_URL
+		if [[ ${ID_URL} != null ]]; then
+			if [[ -z ${ID_URL} ]]; then
+				return 1
 			fi
-			echo "${ID_URL}" >_id.url
+			ID_URL_NUM="$(echo "${ID_URL}" | ${SED} "s|^.+/([^/]+)$|\1|g")"
+			run_cmd "${FUNCNAME}: code" ${WGET_C} --output-document="id.${ID_URL_NUM}.html" "${ID_URL}" || return 1
+			strip_file id.${ID_URL_NUM}.html
+			if [[ ! -s id.${ID_URL_NUM}.html ]]; then
+				${LL} id.${ID_URL_NUM}.html*
+				return 1
+			fi
 		fi
+		echo "${ID_URL}" >_id.url
 	fi
 	ID_URL_NUM="$(echo "${ID_URL}" | ${SED} "s|^.+/([^/]+)$|\1|g")"
 	run_cmd "${FUNCNAME}: output" cat _id.url
 
+	ID_MBID="$(head -n1 _id.mbid 2>/dev/null)"
 	if {
 		[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]] &&
 		[[ ${ID_MBID} != null ]];
 	}; then
-		if [[ -s _id.mbid ]]; then
-			ID_MBID="$(head -n1 _id.mbid)"
-		else
-			run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.code.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"	#>>> || return 1
-			run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.disc.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"						#>>> || return 1
-			strip_file id.code.html
-			strip_file id.disc.html
-			if {
-				{ [[ ! -s id.code.html ]] && [[ ! -f id.code.html.null ]]; } ||
-				{ [[ ! -s id.disc.html ]] && [[ ! -f id.disc.html.null ]]; };
-			}; then
-				${LL} id.code.html*
-				${LL} id.disc.html*
+		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.code.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"	#>>> || return 1
+		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.disc.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"						#>>> || return 1
+		strip_file id.code.html
+		strip_file id.disc.html
+		if {
+			{ [[ ! -s id.code.html ]] && [[ ! -f id.code.html.null ]]; } ||
+			{ [[ ! -s id.disc.html ]] && [[ ! -f id.disc.html.null ]]; };
+		}; then
+			${LL} id.code.html*
+			${LL} id.disc.html*
+			return 1
+		fi
+		declare ID_MBIDS=($(
+			${SED} "s|(<a href=\"/release/${ID_MBID_CHARS}\")|\n\1|g" id.code.html id.disc.html |
+			${SED} -n "s|^.+/release/(${ID_MBID_CHARS}).+>([A-Z]{2})<.+$|\2:\1|gp" |
+			sort -u
+		))
+		echo -en "\n"
+		for FILE in ${ID_MBIDS[@]}; do
+			echo -en "${FILE/%:*}: https://musicbrainz.org/release/${FILE/#*:}\n"
+		done
+		if [[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]]; then
+			if [[ -n ${ID_MBID} ]]; then
+				echo -en "ID_MBID[${ID_MBID}]\n"
+			fi
+			read -p "ID_MBID: " ID_MBID
+		fi
+		ID_MBID="${ID_MBID/#*\/}"
+		if [[ ${ID_MBID} != null ]]; then
+			if [[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]]; then
 				return 1
 			fi
-			declare ID_MBIDS=($(
-				${SED} "s|(<a href=\"/release/${ID_MBID_CHARS}\")|\n\1|g" id.code.html id.disc.html |
-				${SED} -n "s|^.+/release/(${ID_MBID_CHARS}).+>([A-Z]{2})<.+$|\2:\1|gp" |
-				sort -u
-			))
-			echo -en "\n"
-			for FILE in ${ID_MBIDS[@]}; do
-				echo -en "${FILE/%:*}: https://musicbrainz.org/release/${FILE/#*:}\n"
-			done
-			if [[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]]; then
-				if [[ -n ${ID_MBID} ]]; then
-					echo -en "ID_MBID[${ID_MBID}]\n"
-				fi
-				read -p "ID_MBID: " ID_MBID
+#>>>			run_cmd "${FUNCNAME}: mbid" $(which curl) --verbose --remote-time --output "id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"							|| return 1
+			run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"									|| return 1
+			run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json"	|| return 1
+			strip_file id.${ID_MBID}.html
+			strip_file id.${ID_MBID}.json
+			if {
+				[[ ! -s id.${ID_MBID}.html ]] ||
+				[[ ! -s id.${ID_MBID}.json ]];
+			}; then
+				${LL} id.${ID_MBID}.html*
+				${LL} id.${ID_MBID}.json*
+				return 1
 			fi
-			ID_MBID="${ID_MBID/#*\/}"
-			if [[ ${ID_MBID} != null ]]; then
-				if [[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]]; then
-					return 1
-				fi
-#>>>				run_cmd "${FUNCNAME}: mbid" $(which curl) --verbose --remote-time --output "id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"							|| return 1
-				run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"									|| return 1
-				run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json"	|| return 1
-				strip_file id.${ID_MBID}.html
-				strip_file id.${ID_MBID}.json
-				if {
-					[[ ! -s id.${ID_MBID}.html ]] ||
-					[[ ! -s id.${ID_MBID}.json ]];
-				}; then
-					${LL} id.${ID_MBID}.html*
-					${LL} id.${ID_MBID}.json*
-					return 1
-				fi
-			fi
-			echo "${ID_MBID}" >_id.mbid
 		fi
+		echo "${ID_MBID}" >_id.mbid
 	fi
 	run_cmd "${FUNCNAME}: output" cat _id.mbid
 
@@ -488,7 +472,10 @@ function cd_encode {
 			[[ ${ID_URL} != null ]];
 		}; then
 			ID_URL_IMG="$(head -n2 _id.url 2>/dev/null | tail -n1)"
-			if [[ -z ${ID_URL_IMG} ]]; then
+			if {
+				[[ -z ${ID_URL_IMG} ]] ||
+				[[ $(wc -l _id.url 2>/dev/null | ${SED} "s|^([0-9]+).*$|\1|g") == 1 ]];
+			}; then
 				echo -en "URL (image): ${ID_URL}\n"
 				read -p "URL (image): " ID_URL_IMG
 				if [[ -n ${ID_URL_IMG} ]]; then
