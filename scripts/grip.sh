@@ -293,6 +293,7 @@ function cd_encode {
 			\
 			.id.disc
 			.id.code
+			_audio.cue
 		"
 		run_cmd "${FUNCNAME}: reset" ${LL} --directory ${SAFE_LIST}
 		run_cmd "${FUNCNAME}: reset" ${LL} --directory $(
