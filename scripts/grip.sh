@@ -133,7 +133,7 @@ function run_cmd {
 ########################################
 
 function divider {
-	printf "~%.0s" {1..40}	1>&2
+	printf "+%.0s" {1..40}	1>&2
 	echo -en "\n"		1>&2
 	return 0
 }
