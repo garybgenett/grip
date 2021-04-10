@@ -428,7 +428,7 @@ function cd_encode {
 		[[ ${ID_MBID} != null ]];
 	}; then
 		if [[ -s _id.mbid ]]; then
-			ID_MBID="$(cat _id.mbid)"
+			ID_MBID="$(head -n1 _id.mbid)"
 		else
 			run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.code.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"	#>>> || return 1
 			run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.disc.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"						#>>> || return 1
