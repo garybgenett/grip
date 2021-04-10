@@ -487,9 +487,8 @@ function cd_encode {
 			[[ ! -f $(${LS} _image.${ID_URL_NUM}.[0-9-]*) ]] &&
 			[[ ${ID_URL} != null ]];
 		}; then
-			if [[ -n $(tail -n+2 _id.url 2>/dev/null) ]]; then
-				ID_URL_IMG="$(tail -n+2 _id.url)"
-			else
+			ID_URL_IMG="$(head -n2 _id.url 2>/dev/null | tail -n1)"
+			if [[ -z ${ID_URL_IMG} ]]; then
 				echo -en "URL (image): ${ID_URL}\n"
 				read -p "URL (image): " ID_URL_IMG
 				if [[ -n ${ID_URL_IMG} ]]; then
