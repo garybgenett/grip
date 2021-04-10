@@ -209,7 +209,7 @@ function mp_encode {
 	RIPOPTS="${ENCODER} ${INPUT} ${RIPOPTS} -chapter ${CROPCHP} -endpos ${CROPTST} -vf cropdetect -o /dev/null"
 	echo -en "\nDETECT: ${RIPOPTS}\n"
 	${RIPOPTS} 2>/dev/null | ${SED} -n "s|^.+CROP.+crop=([0-9:]+).+$|\1|gp" | sort -u
-	read -p "CROP: " CROP
+	read -p "CROP> " CROP
 
 	RIPOPTS="${OPTIONS}"
 	RIPOPTS="$(echo "${RIPOPTS}" | ${SED} "s|(-oac) [^ ]+|\1 copy|g")"
@@ -358,14 +358,20 @@ function cd_encode {
 	fi
 
 	ID_DISC="$(head -n1 .id.disc 2>/dev/null)"
-	if [[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]]; then
+	if {
+		[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]] &&
+		[[ ${ID_DISC} != null ]];
+	}; then
 		run_cmd "${FUNCNAME}: disc"
-		echo -en "$(which cdda2wav) -info-only -device ${SOURCE}\n"
+		echo -en "CDINDEX: $(which cdda2wav) -info-only -device ${SOURCE}\n"
 		if [[ -n ${ID_DISC} ]]; then
-			echo -en "CDINDEX[${ID_DISC}]\n"
+			echo -en "CDINDEX: ${ID_DISC}\n"
 		fi
-		read -p "CDINDEX: " ID_DISC
-		if [[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]]; then
+		read -p "CDINDEX> " ID_DISC
+		if {
+			[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]] &&
+			[[ ${ID_DISC} != null ]];
+		}; then
 			return 1
 		fi
 		echo "${ID_DISC}" >.id.disc
@@ -378,56 +384,88 @@ function cd_encode {
 		[[ ${ID_CODE} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: code"
-		ID_CODE="$(${SED} -n "s|^CATALOG (.+)$|\1|gp" audio.cue)"
+		FILE="$(${SED} -n "s|^CATALOG (.+)$|\1|gp" audio.cue)"
+		if [[ -n ${FILE} ]]; then
+			echo -en "BARCODE: ${FILE} (audio.cue)\n"
+		fi
 		if [[ -n ${ID_CODE} ]]; then
-			echo -en "BARCODE[${ID_CODE}]\n"
+			echo -en "BARCODE: ${ID_CODE}\n"
 		fi
-		read -p "BARCODE: " ID_CODE
-		if [[ ${ID_CODE} != null ]]; then
-			if [[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]]; then
-				return 1
-			fi
-			if [[ -z $(${GREP} "^CATALOG " audio.cue) ]]; then
-				${SED} -i "s|^(FILE .+$)$|CATALOG ${ID_CODE}\n\1|g" audio.cue
-				${RSYNC_U} audio.cue _audio.cue || return 1
-			fi
+		read -p "BARCODE> " ID_CODE
+		if {
+			[[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]] &&
+			[[ ${ID_CODE} != null ]];
+		}; then
+			return 1
 		fi
+		if [[ -z $(${GREP} "^CATALOG" audio.cue) ]]; then
+			${SED} -i "s|^(FILE .+)$|CATALOG ${ID_CODE}\n\1|g" audio.cue
+		fi
+		${RSYNC_U} audio.cue _audio.cue || return 1
 		echo "${ID_CODE}" >.id.code
 	fi
 	run_cmd "${FUNCNAME}: output" cat .id.code
 
 	ID_COGS="$(head -n1 _id.url 2>/dev/null)"
+	ID_CIMG="$(head -n2 _id.url 2>/dev/null | tail -n1)"
 	ID_CNUM="${ID_COGS/#*\/}"
 	if {
 		[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
 		[[ ${ID_COGS} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: cogs"
-		echo -en "URL: https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
-		read -p "URL: " ID_COGS
+		echo -en "DISCOGS (url): https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
+		if [[ -n ${ID_COGS} ]]; then
+			echo -en "DISCOGS (url): ${ID_COGS}\n"
+		fi
+		read -p "DISCOGS (url)> " ID_COGS
+		ID_CNUM="${ID_COGS/#*\/}"
 		if {
 			[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
 			[[ ${ID_COGS} != null ]];
 		}; then
-			if [[ -z ${ID_COGS} ]]; then
-				return 1
-			fi
-			ID_CNUM="${ID_COGS/#*\/}"
-			run_cmd "${FUNCNAME}: cogs" ${WGET_C} --output-document="id.${ID_CNUM}.html" "${ID_COGS}" || return 1
-			strip_file id.${ID_CNUM}.html
-			if [[ ! -s id.${ID_CNUM}.html ]]; then
-				${LL} id.${ID_CNUM}.html*
-				return 1
-			fi
+			return 1
 		fi
-		echo "${ID_COGS}" >_id.url
+		echo "${ID_COGS}"	>_id.url
+		echo "${ID_CIMG}"	>>_id.url
+	fi
+	if {
+		[[ $(wc -l _id.url 2>/dev/null) == 2 ]] &&
+		[[ -z $(echo "${ID_CIMG}" | ${GREP} -o "^${ID_CIMG_CHARS}$") ]] &&
+		[[ ${ID_CIMG} != null ]];
+	}; then
+		run_cmd "${FUNCNAME}: cogs"
+		echo -en "DISCOGS (image): ${ID_COGS}\n"
+		if [[ -n ${ID_CIMG} ]]; then
+			echo -en "DISCOGS (image): ${ID_CIMG}\n"
+		fi
+		read -p "DISCOGS (image)> " ID_CIMG
+		if {
+			[[ -z $(echo "${ID_CIMG}" | ${GREP} -o "^${ID_CIMG_CHARS}$") ]] &&
+			[[ ${ID_CIMG} != null ]];
+		}; then
+			return 1
+		fi
+		echo "${ID_COGS}"	>_id.url
+		echo "${ID_CIMG}"	>>_id.url
 	fi
 	run_cmd "${FUNCNAME}: output" cat _id.url
+	if {
+		{ [[ ! -s id.${ID_CNUM}.html ]] && [[ ! -f id.${ID_CNUM}.html.null ]]; };
+	}; then
+		run_cmd "${FUNCNAME}: cogs"
+		run_cmd "${FUNCNAME}: cogs" ${WGET_C} --output-document="id.${ID_CNUM}.html" "${ID_COGS}" || return 1
+		strip_file id.${ID_CNUM}.html
+		if [[ ! -s id.${ID_CNUM}.html ]]; then
+			${LL} id.${ID_CNUM}.html*
+			return 1
+		fi
+	fi
 
 	ID_MBID="$(head -n1 _id.mbid 2>/dev/null)"
 	if {
-		[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]] &&
-		[[ ${ID_MBID} != null ]];
+		{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; } ||
+		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
 	}; then
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"	#>>> || return 1
@@ -442,122 +480,120 @@ function cd_encode {
 			${LL} mb.${ID_DISC}.html*
 			return 1
 		fi
+	fi
+	if {
+		[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]] &&
+		[[ ${ID_MBID} != null ]];
+	}; then
 		run_cmd "${FUNCNAME}: mbid"
 		declare ID_MBIDS=($(
 			${SED} "s|(<a href=\"/release/${ID_MBID_CHARS}\")|\n\1|g" mb.${ID_CODE}.html mb.${ID_DISC}.html |
 			${SED} -n "s|^.+/release/(${ID_MBID_CHARS}).+>([A-Z]{2})<.+$|\2:\1|gp" |
 			sort -u
 		))
-		echo -en "\n"
 		for FILE in ${ID_MBIDS[@]}; do
 			echo -en "${FILE/%:*}: https://musicbrainz.org/release/${FILE/#*:}\n"
 		done
 		if [[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]]; then
 			if [[ -n ${ID_MBID} ]]; then
-				echo -en "ID_MBID[${ID_MBID}]\n"
+				echo -en "MBID: ${ID_MBID}\n"
 			fi
-			read -p "ID_MBID: " ID_MBID
+			read -p "MBID> " ID_MBID
 		fi
 		ID_MBID="${ID_MBID/#*\/}"
-		if [[ ${ID_MBID} != null ]]; then
-			if [[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]]; then
-				return 1
-			fi
-#>>>			run_cmd "${FUNCNAME}: mbid" $(which curl) --verbose --remote-time --output "id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"							|| return 1
-			run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"									|| return 1
-			run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json"	|| return 1
-			strip_file id.${ID_MBID}.html
-			strip_file id.${ID_MBID}.json
-			if {
-				[[ ! -s id.${ID_MBID}.html ]] ||
-				[[ ! -s id.${ID_MBID}.json ]];
-			}; then
-				${LL} id.${ID_MBID}.html*
-				${LL} id.${ID_MBID}.json*
-				return 1
-			fi
+		if {
+			[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]] &&
+			[[ ${ID_MBID} != null ]];
+		}; then
+			return 1
 		fi
 		echo "${ID_MBID}" >_id.mbid
 	fi
 	run_cmd "${FUNCNAME}: output" cat _id.mbid
+	if {
+		{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; } ||
+		{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; };
+	}; then
+		run_cmd "${FUNCNAME}: mbid"
+#>>>		run_cmd "${FUNCNAME}: mbid" $(which curl) --verbose --remote-time --output "id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"							|| return 1
+		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"									|| return 1
+		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json"	|| return 1
+		strip_file id.${ID_MBID}.html
+		strip_file id.${ID_MBID}.json
+		if {
+			{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; } ||
+			{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; };
+		}; then
+			${LL} id.${ID_MBID}.html*
+			${LL} id.${ID_MBID}.json*
+			return 1
+		fi
+	fi
 
+	if {
+		[[ ! -f $(${LS} _image.${ID_CNUM}.[0-9-]*) ]] &&
+		[[ ${ID_COGS} != null ]] &&
+		[[ ${ID_CIMG} != null ]];
+	}; then
+		run_cmd "${FUNCNAME}: images"
+		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_CNUM}.html"				"${ID_CIMG}" #>>> || return 1
+		strip_file image.${ID_CNUM}.html
+		if { [[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]]; }; then
+			${LL} image.${ID_CNUM}.html*
+			return 1
+		fi
+		declare IMGS=($(${SED} \
+				-e "s| \"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
+				-e "s|src=\"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
+				-e "s|content=\"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
+				image.${ID_CNUM}.html |
+			${GREP} "^https://img.discogs.com/" |
+			${GREP} "quality\(90\)" |
+			${GREP} "format\(jpeg\)" |
+			sort -u
+		))
+		declare IMG=
+		for FILE in ${IMGS[@]}; do
+			IMG="$(echo "${FILE}" | ${SED} \
+				-e "s|^.+R-||g" \
+				-e "s|.jpeg.jpg||g" \
+			)"
+			if [[ ! -s image.${IMG}.jpg ]]; then
+				run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${IMG/-/.}.jpg"		"${FILE}" || return 1
+			fi
+		done
+		touch _image.${ID_CNUM}.${DATE}
+	fi
+	if {
+		[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]*) ]] &&
+		[[ ${ID_MBID} != null ]];
+	}; then
+		run_cmd "${FUNCNAME}: images"
+		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.json"				http://coverartarchive.org/release/${ID_MBID}		#>>> || return 1
+#>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.front.jpg"				http://coverartarchive.org/release/${ID_MBID}/front	|| return 1
+#>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.back.jpg"				http://coverartarchive.org/release/${ID_MBID}/back	|| return 1
+		strip_file image.${ID_MBID}.json
+		if { [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; }; then
+			${LL} image.${ID_MBID}.json*
+			return 1
+		fi
+		declare IMGS=($(jq --raw-output '.images[] | .id'								image.${ID_MBID}.json))
+#>>>		declare FRNT=($(jq --raw-output '.images[] | select(.types[]? | contains("Front")) | .id'			image.${ID_MBID}.json))
+#>>>		declare BACK=($(jq --raw-output '.images[] | select(.types[]? | contains("Back")) | .id'			image.${ID_MBID}.json))
+#>>>		declare MEDI=($(jq --raw-output '.images[] | select(.types[]? | contains("Medium")) | .id'			image.${ID_MBID}.json))
+		for FILE in ${IMGS[@]}; do
+			if [[ ! -s image.${ID_MBID}.${FILE}.jpg ]]; then
+				run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.${FILE}.jpg"	http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg || return 1
+			fi
+		done
+		touch _image.${ID_MBID}.${DATE}
+	fi
 	if {
 		[[ ! -s _image.icon.png		]] ||
 		[[ ! -s _image.front.jpg	]] ||
 		[[ ! -s _image.back.jpg		]] ||
 		[[ ! -s _image.media.jpg	]];
 	}; then
-		run_cmd "${FUNCNAME}: images"
-		if {
-			[[ ! -f $(${LS} _image.${ID_CNUM}.[0-9-]*) ]] &&
-			[[ ${ID_COGS} != null ]];
-		}; then
-			ID_CIMG="$(head -n2 _id.url 2>/dev/null | tail -n1)"
-			if {
-				[[ -z $(echo "${ID_CIMG}" | ${GREP} -o "^${ID_CIMG_CHARS}$") ]] ||
-				[[ $(wc -l _id.url 2>/dev/null | ${SED} "s|^([0-9]+).*$|\1|g") == 1 ]];
-			}; then
-				echo -en "URL (image): ${ID_COGS}\n"
-				read -p "URL (image): " ID_CIMG
-				if [[ -n $(echo "${ID_CIMG}" | ${GREP} -o "^${ID_CIMG_CHARS}$") ]]; then
-					echo "${ID_COGS}"	>_id.url
-					echo "${ID_CIMG}"	>>_id.url
-				fi
-			fi
-			if [[ -z ${ID_CIMG} ]]; then
-				return 1
-			fi
-			run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_CNUM}.html"				"${ID_CIMG}" #>>> || return 1
-			strip_file image.${ID_CNUM}.html
-			if { [[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]]; }; then
-				${LL} image.${ID_CNUM}.html*
-				return 1
-			fi
-			declare IMGS=($(${SED} \
-					-e "s| \"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
-					-e "s|src=\"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
-					-e "s|content=\"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
-					image.${ID_CNUM}.html |
-				${GREP} "^https://img.discogs.com/" |
-				${GREP} "quality\(90\)" |
-				${GREP} "format\(jpeg\)" |
-				sort -u
-			))
-			declare IMG=
-			for FILE in ${IMGS[@]}; do
-				IMG="$(echo "${FILE}" | ${SED} \
-					-e "s|^.+R-||g" \
-					-e "s|.jpeg.jpg||g" \
-				)"
-				if [[ ! -s image.${IMG}.jpg ]]; then
-					run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${IMG}.jpg"			"${FILE}" || return 1
-				fi
-			done
-			touch _image.${ID_CNUM}.${DATE}
-		fi
-		if {
-			[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]*) ]] &&
-			[[ ${ID_MBID} != null ]];
-		}; then
-			run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.json"				http://coverartarchive.org/release/${ID_MBID}		#>>> || return 1
-#>>>			run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.front.jpg"				http://coverartarchive.org/release/${ID_MBID}/front	|| return 1
-#>>>			run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.back.jpg"				http://coverartarchive.org/release/${ID_MBID}/back	|| return 1
-			strip_file image.${ID_MBID}.json
-			if { [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; }; then
-				${LL} image.${ID_MBID}.json*
-				return 1
-			fi
-			declare IMGS=($(jq --raw-output '.images[] | .id'								image.${ID_MBID}.json))
-#>>>			declare FRNT=($(jq --raw-output '.images[] | select(.types[]? | contains("Front")) | .id'			image.${ID_MBID}.json))
-#>>>			declare BACK=($(jq --raw-output '.images[] | select(.types[]? | contains("Back")) | .id'			image.${ID_MBID}.json))
-#>>>			declare MEDI=($(jq --raw-output '.images[] | select(.types[]? | contains("Medium")) | .id'			image.${ID_MBID}.json))
-			for FILE in ${IMGS[@]}; do
-				if [[ ! -s image.${ID_MBID}.${FILE}.jpg ]]; then
-					run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.${FILE}.jpg"	http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg || return 1
-				fi
-			done
-			touch _image.${ID_MBID}.${DATE}
-		fi
 		run_cmd "${FUNCNAME}: images"
 		function image_select {
 			declare IMG="${1}" && shift
@@ -732,7 +768,6 @@ function cd_encode {
 			audio.wav \
 			|| return 1
 	fi
-
 	if [[ -f ${ID_NAME}.flac ]]; then
 		if [[ ! -s ${ID_NAME}.wav ]]; then
 #>>>			run_cmd "${FUNCNAME}: verify"	flac --force --analyze	${ID_NAME}.flac || return 1
@@ -802,7 +837,7 @@ function cd_encode {
 	if [[ ! -d ${ID_NAME}.flac.dir ]]; then
 		flac_unpack ${ID_NAME}.flac
 		if {
-			! run_cmd "${FUNCNAME}: unpack" diff ${DIFF_OPTS} -r \
+			! run_cmd "${FUNCNAME}: validate" diff ${DIFF_OPTS} -r \
 				--exclude="audio_*" \
 				--exclude="${ID_NAME}*" \
 				${PWD} ${ID_NAME}.flac.dir;
