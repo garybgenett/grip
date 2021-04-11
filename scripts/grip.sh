@@ -272,10 +272,10 @@ function cd_cuefile {
 	shopt -s lastpipe
 	cdir -D -n -d ${SOURCE} 1>&2; echo -en "\n" 1>&2
 	cdir -D -n -d ${SOURCE} 2>/dev/null | ${GREP} -v -e "[a-z]" -e "\[DATA\]" | while read -r FILE; do
-		TRACK="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\4|g")"; if [[ ${TRACK} != [0-9][0-9] ]]; then TRACK="0${TRACK}"; fi
-		IDX_M="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\1|g")"; if [[ ${IDX_M} != [0-9][0-9] ]]; then IDX_M="0${IDX_M}"; fi
-		IDX_S="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\2|g")"; if [[ ${IDX_S} != [0-9][0-9] ]]; then IDX_S="0${IDX_S}"; fi
-		IDX_F="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\3|g")"; if [[ ${IDX_F} != [0-9][0-9] ]]; then IDX_F="0${IDX_F}"; fi
+		TRACK="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\4|g")"; if [[ ${TRACK} == [0-9] ]]; then TRACK="0${TRACK}"; fi
+		IDX_M="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\1|g")"; if [[ ${IDX_M} == [0-9] ]]; then IDX_M="0${IDX_M}"; fi
+		IDX_S="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\2|g")"; if [[ ${IDX_S} == [0-9] ]]; then IDX_S="0${IDX_S}"; fi
+		IDX_F="$(echo "${FILE}" | ${SED} "s|^[[:space:]]*([0-9]+)\:([0-9]+)\.([0-9]+)[[:space:]]+([0-9]+).*$|\3|g")"; if [[ ${IDX_F} == [0-9] ]]; then IDX_F="0${IDX_F}"; fi
 		echo -en "  TRACK ${TRACK} AUDIO\n"
 		echo -en "    INDEX 01 ${TTL_M}:${TTL_S}:${TTL_F}\n"
 		echo -en "           + ${IDX_M}:${IDX_S}:${IDX_F}\n" 1>&2
@@ -284,9 +284,9 @@ function cd_cuefile {
 		TTL_S="$(expr ${TTL_S} + ${IDX_S})";	((${TTL_S} >= ${SECOND_PER_MINUTE})) && { TTL_M="$(expr ${TTL_M} + 1)"; TTL_S="$(expr ${TTL_S} - ${SECOND_PER_MINUTE})"; }
 							((${TTL_S} >= ${SECOND_PER_MINUTE})) && { TTL_M="$(expr ${TTL_M} + 1)"; TTL_S="$(expr ${TTL_S} - ${SECOND_PER_MINUTE})"; }
 		TTL_M="$(expr ${TTL_M} + ${IDX_M})";
-		if [[ ${TTL_M} != [0-9][0-9] ]]; then TTL_M="0${TTL_M}"; fi
-		if [[ ${TTL_S} != [0-9][0-9] ]]; then TTL_S="0${TTL_S}"; fi
-		if [[ ${TTL_F} != [0-9][0-9] ]]; then TTL_F="0${TTL_F}"; fi
+		if [[ ${TTL_M} == [0-9] ]]; then TTL_M="0${TTL_M}"; fi
+		if [[ ${TTL_S} == [0-9] ]]; then TTL_S="0${TTL_S}"; fi
+		if [[ ${TTL_F} == [0-9] ]]; then TTL_F="0${TTL_F}"; fi
 	done
 	echo -en "      TOTAL: ${TTL_M}:${TTL_S}:${TTL_F}\n" 1>&2
 	return 0
@@ -701,7 +701,9 @@ function cd_encode {
 		declare YEAR="$(jq --raw-output '.date'				id.${ID_MBID}.json | ${SED} "s|-.+||g")"
 		declare TRCK="$(jq --raw-output '.media[].tracks[] | .position'	id.${ID_MBID}.json | sort -n | tail -n1)"
 		if [[ -z ${TRCK} ]]; then
-			TRCK=1
+			TRCK="01"
+		elif [[ ${TRCK} == [0-9] ]]; then
+			TRCK="0${TRCK}"
 		fi
 		declare -a TTL
 		declare -a ART
@@ -728,7 +730,7 @@ function cd_encode {
 		echo -en "TRCK: ${TRCK}\n"				| tee -a .metadata
 		FILE="1"
 		while (( ${FILE} <= ${TRCK} )); do
-			if [[ ${FILE} != [0-9][0-9] ]]; then
+			if [[ ${FILE} == [0-9] ]]; then
 				FILE="0${FILE}"
 			fi
 			echo -en "${FILE}_T: ${TTL[${FILE/#0}]}\n"	| tee -a .metadata
@@ -769,7 +771,7 @@ function cd_encode {
 			_metadata
 		FILE="1"
 		while (( ${FILE} <= $(meta_get TRCK) )); do
-			if [[ ${FILE} != [0-9][0-9] ]]; then
+			if [[ ${FILE} == [0-9] ]]; then
 				FILE="0${FILE}"
 			fi
 			${SED} -i "s|^(  TRACK ${FILE} AUDIO)$|\1$(
@@ -796,7 +798,7 @@ function cd_encode {
 		echo -en "DATE=$(meta_get YEAR)\n"						>>_metadata.tags
 		FILE="1"
 		while (( ${FILE} <= $(meta_get TRCK) )); do
-			if [[ ${FILE} != [0-9][0-9] ]]; then
+			if [[ ${FILE} == [0-9] ]]; then
 				FILE="0${FILE}"
 			fi
 			echo -en "CHAPTER0${FILE}=$(
@@ -997,7 +999,7 @@ function flac_unpack {
 		shopt -s lastpipe
 		while [[ ${1} == +([0-9]) ]]; do
 			FILE="${1}" && shift
-			if [[ ${FILE} != [0-9][0-9] ]]; then
+			if [[ ${FILE} == [0-9] ]]; then
 				FILE="0${FILE}"
 			fi
 			if [[ ! -s $(${LS} ${UNPACK}.dir/${BASENAME}.${FILE}.* 2>/dev/null) ]]; then
@@ -1037,7 +1039,7 @@ function flac_export {
 	}; then
 		TRACKR="${1}"
 		shift
-		if [[ ${TRACKR} != [0-9][0-9] ]]; then
+		if [[ ${TRACKR} == [0-9] ]]; then
 			TRACKR="0${TRACKR}"
 		fi
 		COUNTR="${TRACKR}"
