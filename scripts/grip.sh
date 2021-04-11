@@ -45,15 +45,33 @@ declare PARANOIA_OPTS="proof"
 declare CD_SPEED="6"
 
 declare FLAC_MANY="Various Artists"
-declare FLAC_TDIV=" \/\/ "
-declare FLAC_ADIV="\; "
-declare FLAC_NDIV="\. "
+declare FLAC_TDIV=" \/\/ "	# no dashes (-); they will break the regular expression validation below
+declare FLAC_ADIV="\; "		# no dashes (-); they will break the regular expression validation below
+declare FLAC_NDIV="\. "		# no dashes (-); they will break the regular expression validation below
 
 declare FLAC_HASH_CHARS="[0-9a-f]{40}"
 declare FLAC_HASH="sha1sum"
 declare FLAC_BLCK="8"
 
-declare ID_NAME= ; declare ID_NAME_CHARS="[-._a-zA-Z0-9+]+"
+declare ID_NAME=
+declare ID_FILE_CHARS="-#+:="
+declare ID_EXTR_CHARS="()'!"
+declare ID_NAME_CHARS="[-._a-zA-Z0-9+]+"
+declare ID_TITL_CHARS="$(echo "${ID_NAME_CHARS}" | ${SED} "s|\]\+?$||g")${FLAC_TDIV//\\}${FLAC_NDIV//\\}${ID_EXTR_CHARS}]+"
+declare ID_ARTS_CHARS="$(echo "${ID_NAME_CHARS}" | ${SED} "s|\]\+?$||g")${FLAC_ADIV//\\}${ID_EXTR_CHARS}]+"
+declare ID_YEAR_CHARS="[0-9]{4}"
+declare ID_TRCK_CHARS="[0-9]{2}"
+
+# bracket detection, along with all the other charaacters, is very involved, so not doing that
+# thus, brackets are not allowed, at all, anywhere
+declare FILEALL_CHARS=
+FILEALL_CHARS+="["
+FILEALL_CHARS+="${ID_FILE_CHARS}"
+FILEALL_CHARS+="${ID_EXTR_CHARS}"
+FILEALL_CHARS+="$(echo "${ID_NAME_CHARS}" | ${SED} -e "s|^\[-?||g" -e "s|-?\]\+?$||g")"
+FILEALL_CHARS+="$(echo "${ID_TITL_CHARS}" | ${SED} -e "s|^\[-?||g" -e "s|-?\]\+?$||g")"
+FILEALL_CHARS+="$(echo "${ID_ARTS_CHARS}" | ${SED} -e "s|^\[-?||g" -e "s|-?\]\+?$||g")"
+FILEALL_CHARS+="]"
 
 declare ID_FCVR=
 declare ID_BCVR=
@@ -749,21 +767,42 @@ function cd_encode {
 			FILE="$((${FILE/#0}+1))"
 		done
 	fi
-	if {
-		[[ -z $(echo "${ID_NAME}" | ${GREP} -o "^${ID_NAME_CHARS}$") ]] &&
-		[[ ${ID_NAME} != null ]];
-	}; then
+	if [[ -z ${ID_NAME} ]]; then
 		run_cmd "${FUNCNAME}: metadata"
 		ID_NAME="$(namer "$(meta_get ARTS).$(meta_get TITL).$(meta_get YEAR)")"
 		ID_NAME="$(echo "${ID_NAME}" | ${SED} "s|^$(namer "${FLAC_MANY}")\.||g")"
 		meta_set NAME ${ID_NAME}
 	fi
-	if {
-		[[ -z $(meta_get TITL) ]] ||
-		[[ ! -f _metadata ]];
-	}; then
+	if [[ ! -f _metadata ]]; then
 		run_cmd "${FUNCNAME}: metadata"
 		${EDITOR} .metadata
+	fi
+	if {
+		declare FAIL="false"
+		if ${GREP} "${FILEALL_CHARS/#[/[^}" .metadata; then FAIL="true"; fi
+		if { [[ -z $(meta_get NAME) ]] || [[ -z $(meta_get NAME | ${GREP} -o "^${ID_NAME_CHARS}$") ]]; }; then echo -en "NAME: "; meta_get NAME; FAIL="true"; fi
+		if { [[ -z $(meta_get TITL) ]] || [[ -z $(meta_get TITL | ${GREP} -o "^${ID_TITL_CHARS}$") ]]; }; then echo -en "TITL: "; meta_get TITL; FAIL="true"; fi
+		if { [[ -z $(meta_get ARTS) ]] || [[ -z $(meta_get ARTS | ${GREP} -o "^${ID_ARTS_CHARS}$") ]]; }; then echo -en "ARTS: "; meta_get ARTS; FAIL="true"; fi
+		if { [[ -z $(meta_get YEAR) ]] || [[ -z $(meta_get YEAR | ${GREP} -o "^${ID_YEAR_CHARS}$") ]]; }; then echo -en "YEAR: "; meta_get YEAR; FAIL="true"; fi
+		if { [[ -z $(meta_get TRCK) ]] || [[ -z $(meta_get TRCK | ${GREP} -o "^${ID_TRCK_CHARS}$") ]]; }; then echo -en "TRCK: "; meta_get TRCK; FAIL="true"; fi
+		FILE="1"
+		while (( ${FILE} <= $(meta_get TRCK) )); do
+			if [[ ${FILE} == [0-9] ]]; then
+				FILE="0${FILE}"
+			fi
+			if {
+				{ [[ -z $(meta_get ${FILE}_T) ]] || [[ -z $(meta_get ${FILE}_T | ${GREP} -o "^${ID_TITL_CHARS}$") ]]; } ||
+				{ [[ -z $(meta_get ${FILE}_A) ]] || [[ -z $(meta_get ${FILE}_A | ${GREP} -o "^${ID_ARTS_CHARS}$") ]]; };
+			}; then
+				echo -en "${FILE}_T: "; meta_get ${FILE}_T
+				echo -en "${FILE}_A: "; meta_get ${FILE}_A
+				FAIL="true"
+			fi
+			FILE="$((${FILE/#0}+1))"
+		done
+		${FAIL}
+	}; then
+		return 1
 	fi
 
 	if {
