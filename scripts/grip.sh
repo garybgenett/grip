@@ -14,8 +14,8 @@ declare S_LANG=""
 
 declare DATE="$(date --iso)"
 
-declare FRAMES_PER_SECOND="75"
 declare SECOND_PER_MINUTE="60"
+declare FRAMES_PER_SECOND="75"
 
 ########################################
 
@@ -53,24 +53,18 @@ declare FLAC_HASH_CHARS="[0-9a-f]{40}"
 declare FLAC_HASH="sha1sum"
 declare FLAC_BLCK="8"
 
-declare ID_NAME_CHARS="[a-zA-Z0-9+_.-]+"
-declare ID_NAME=
+declare ID_NAME= ; declare ID_NAME_CHARS="[-._a-zA-Z0-9+]+"
 
 declare ID_FCVR=
 declare ID_BCVR=
 declare ID_MCVR=
 
-declare ID_DISC_CHARS="[a-zA-Z0-9_.-]{28}"
-declare ID_DISC=
-declare ID_CODE_CHARS="[0-9]{13}"
-declare ID_CODE=
-declare ID_MBID_CHARS="[0-9a-f-]{36}"
-declare ID_MBID=
+declare ID_DISC= ; declare ID_DISC_CHARS="[a-zA-Z0-9_.-]{28}"
+declare ID_CODE= ; declare ID_CODE_CHARS="[0-9]{13}"
+declare ID_MBID= ; declare ID_MBID_CHARS="[0-9a-f-]{36}"
 
-declare ID_COGS_CHARS="https?://.+"
-declare ID_COGS=
-declare ID_CIMG_CHARS="https?://.+"
-declare ID_CIMG=
+declare ID_COGS= ; declare ID_COGS_CHARS="https?://.+"
+declare ID_CIMG= ; declare ID_CIMG_CHARS="https?://.+"
 declare ID_CNUM=
 
 ########################################
@@ -103,10 +97,10 @@ if [[ ${1} == -+([a-z]) ]]; then
 	shift
 fi
 
-[[ ${1} == +([0-9])	]] && TRACKN="${1}"			&& shift
-[[ ${1} == +([A-Za-z])	]] && A_LANG="${1}"			&& shift
-[[ ${1} == +([A-Za-z])	]] && S_LANG="${1}"			&& shift
-[[ -b ${1} || -f ${1}	]] && SOURCE="$(realpath -s ${1})"	&& shift
+[[ ${1} == +([0-9])	]] && TRACKN="${1}"				&& shift
+[[ ${1} == +([A-Za-z])	]] && A_LANG="${1}"				&& shift
+[[ ${1} == +([A-Za-z])	]] && S_LANG="${1}"				&& shift
+[[ -b ${1} || -f ${1}	]] && SOURCE="$(realpath --no-symlinks ${1})"	&& shift
 
 ########################################
 
@@ -280,10 +274,12 @@ function cd_cuefile {
 		echo -en "    INDEX 01 ${TTL_M}:${TTL_S}:${TTL_F}\n"
 		echo -en "           + ${IDX_M}:${IDX_S}:${IDX_F}\n" 1>&2
 		echo -en "\n" 1>&2
-		TTL_F="$(expr ${TTL_F} + ${IDX_F})";	((${TTL_F} >= ${FRAMES_PER_SECOND})) && { TTL_S="$(expr ${TTL_S} + 1)"; TTL_F="$(expr ${TTL_F} - ${FRAMES_PER_SECOND})"; }
-		TTL_S="$(expr ${TTL_S} + ${IDX_S})";	((${TTL_S} >= ${SECOND_PER_MINUTE})) && { TTL_M="$(expr ${TTL_M} + 1)"; TTL_S="$(expr ${TTL_S} - ${SECOND_PER_MINUTE})"; }
-							((${TTL_S} >= ${SECOND_PER_MINUTE})) && { TTL_M="$(expr ${TTL_M} + 1)"; TTL_S="$(expr ${TTL_S} - ${SECOND_PER_MINUTE})"; }
-		TTL_M="$(expr ${TTL_M} + ${IDX_M})";
+		TTL_F="${TTL_F/#0}";
+		TTL_S="${TTL_S/#0}";
+		TTL_M="${TTL_M/#0}";
+		TTL_F="$((${TTL_F}+${IDX_F}))"; (( ${TTL_F} >= ${FRAMES_PER_SECOND} )) && { TTL_S="$((${TTL_S}+1))"; TTL_F="$((${TTL_F}-${FRAMES_PER_SECOND}))"; }
+		TTL_S="$((${TTL_S}+${IDX_S}))"; (( ${TTL_S} >= ${SECOND_PER_MINUTE} )) && { TTL_M="$((${TTL_M}+1))"; TTL_S="$((${TTL_S}-${SECOND_PER_MINUTE}))"; }
+		TTL_M="$((${TTL_M}+${IDX_M}))";
 		if [[ ${TTL_M} == [0-9] ]]; then TTL_M="0${TTL_M}"; fi
 		if [[ ${TTL_S} == [0-9] ]]; then TTL_S="0${TTL_S}"; fi
 		if [[ ${TTL_F} == [0-9] ]]; then TTL_F="0${TTL_F}"; fi
@@ -534,20 +530,18 @@ function cd_encode {
 		[[ ${ID_MBID} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: mbid"
-		declare ID_MBIDS=($(
+		declare MBIDS=($(
 			${SED} "s|(<a href=\"/release/${ID_MBID_CHARS}\")|\n\1|g" mb.${ID_CODE}.html mb.${ID_DISC}.html |
 			${SED} -n "s|^.+/release/(${ID_MBID_CHARS}).+>([A-Z]{2})<.+$|\2:\1|gp" |
 			sort -u
 		))
-		for FILE in ${ID_MBIDS[@]}; do
+		for FILE in ${MBIDS[@]}; do
 			echo -en "${FILE/%:*}: https://musicbrainz.org/release/${FILE/#*:}\n"
 		done
-		if [[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]]; then
-			if [[ -n ${ID_MBID} ]]; then
-				echo -en "MBID: ${ID_MBID}\n"
-			fi
-			read -p "MBID> " ID_MBID
+		if [[ -n ${ID_MBID} ]]; then
+			echo -en "MBID: ${ID_MBID}\n"
 		fi
+		read -p "MBID> " ID_MBID
 		ID_MBID="${ID_MBID/#*\/}"
 		if {
 			[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]] &&
@@ -581,14 +575,16 @@ function cd_encode {
 	ID_BCVR="$(meta_get BCVR)"
 	ID_MCVR="$(meta_get MCVR)"
 	if {
-		[[ ! -f $(${LS} _image.${ID_CNUM}.[0-9-]*) ]] &&
+		[[ ! -f $(${LS} _image.${ID_CNUM}.[0-9-]* 2>/dev/null | tail -n1) ]] &&
 		[[ ${ID_COGS} != null ]] &&
 		[[ ${ID_CIMG} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: images"
 		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_CNUM}.html"				"${ID_CIMG}" #>>> || return 1
 		strip_file image.${ID_CNUM}.html
-		if { [[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]]; }; then
+		if {
+			[[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]];
+		}; then
 			${LL} image.${ID_CNUM}.html*
 			return 1
 		fi
@@ -605,17 +601,18 @@ function cd_encode {
 		declare IMG=
 		for FILE in ${IMGS[@]}; do
 			IMG="$(echo "${FILE}" | ${SED} \
+				-e "s|-|.|g" \
 				-e "s|^.+R-||g" \
-				-e "s|.jpeg.jpg||g" \
+				-e "s|.jpeg.jpg$||g" \
 			)"
 			if [[ ! -s image.${IMG}.jpg ]]; then
-				run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${IMG/-/.}.jpg"		"${FILE}" || return 1
+				run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${IMG}.jpg"			"${FILE}" || return 1
 			fi
 		done
 		touch _image.${ID_CNUM}.${DATE}
 	fi
 	if {
-		[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]*) ]] &&
+		[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]* 2>/dev/null | tail -n1) ]] &&
 		[[ ${ID_MBID} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: images"
@@ -623,7 +620,9 @@ function cd_encode {
 #>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.front.jpg"				http://coverartarchive.org/release/${ID_MBID}/front	|| return 1
 #>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.back.jpg"				http://coverartarchive.org/release/${ID_MBID}/back	|| return 1
 		strip_file image.${ID_MBID}.json
-		if { [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; }; then
+		if {
+			[[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]];
+		}; then
 			${LL} image.${ID_MBID}.json*
 			return 1
 		fi
@@ -640,9 +639,9 @@ function cd_encode {
 	fi
 	if {
 		[[ ! -s _image.icon.png		]] ||
-		{ [[ ! -s _image.front.jpg	]] || [[ $(realpath --relative-to="." _image.front.jpg)	!= $(realpath --relative-to="." ${ID_FCVR}) ]]; } ||
-		{ [[ ! -s _image.back.jpg	]] || [[ $(realpath --relative-to="." _image.back.jpg)	!= $(realpath --relative-to="." ${ID_BCVR}) ]]; } ||
-		{ [[ ! -s _image.media.jpg	]] || [[ $(realpath --relative-to="." _image.media.jpg)	!= $(realpath --relative-to="." ${ID_MCVR}) ]]; };
+		{ [[ ! -s _image.front.jpg	]] || [[ $(basename $(realpath _image.front.jpg))	!= $(basename $(realpath ${ID_FCVR})) ]]; } ||
+		{ [[ ! -s _image.back.jpg	]] || [[ $(basename $(realpath _image.back.jpg))	!= $(basename $(realpath ${ID_BCVR})) ]]; } ||
+		{ [[ ! -s _image.media.jpg	]] || [[ $(basename $(realpath _image.media.jpg))	!= $(basename $(realpath ${ID_MCVR})) ]]; };
 	}; then
 		run_cmd "${FUNCNAME}: images"
 		function image_select {
@@ -651,13 +650,13 @@ function cd_encode {
 			declare VAL="${1}" && shift
 			echo -en "\n"
 			if [[ -s _image.${IMG}.jpg ]]; then
-				echo -en "IMAGE (${IMG}): $(realpath --relative-to="." _image.${IMG}.jpg) (file)\n"
+				echo -en "IMAGE (${IMG}): $(basename $(realpath _image.${IMG}.jpg)) (file)\n"
 			fi
 			if [[ -n ${VAL} ]]; then
 				echo -en "IMAGE (${IMG}): ${VAL}\n"
 			fi
 			if [[ -s ${VAL} ]]; then
-				if [[ $(realpath --relative-to="." _image.${IMG}.jpg) != ${VAL} ]]; then
+				if [[ $(basename $(realpath _image.${IMG}.jpg)) != ${VAL} ]]; then
 					${LN} ${VAL} _image.${IMG}.jpg
 				fi
 			else
@@ -669,7 +668,12 @@ function cd_encode {
 			fi
 			return 0
 		}
-		{ ${IMAGE_CMD} image.*.{png,jpg} 2>/dev/null || return 1; } &
+		{
+			echo -en "\${IMAGE_CMD}: ${IMAGE_CMD}\n"
+			${IMAGE_CMD} image.*.{png,jpg} &
+			sleep 0.1; jobs 1 2>/dev/null || return 1
+			sleep 0.1; jobs 1 2>/dev/null || return 1
+		}
 		${LS} image.*.{png,jpg} 2>/dev/null | while read -r FILE; do
 			echo -en "${FILE}\n"
 		done
@@ -695,14 +699,21 @@ function cd_encode {
 #>>>	run_cmd "${FUNCNAME}: output" ${LL} _image.*
 
 	ID_NAME="$(meta_get NAME)"
-	if [[ -z $(meta_get TITL) ]]; then
+	if {
+		false
+		[[ -z $(meta_get TITL) ]] ||
+		[[ -z $(meta_get ARTS) ]] ||
+		[[ -z $(meta_get YEAR) ]] ||
+		[[ -z $(meta_get TRCK) ]];
+	}; then
 		run_cmd "${FUNCNAME}: metadata"
 		declare TITL="$(jq --raw-output '.title'			id.${ID_MBID}.json)"
-		declare YEAR="$(jq --raw-output '.date'				id.${ID_MBID}.json | ${SED} "s|-.+||g")"
+		declare YEAR="$(jq --raw-output '.date'				id.${ID_MBID}.json | ${SED} "s|^([^-]+).*$|\1|g")"
 		declare TRCK="$(jq --raw-output '.media[].tracks[] | .position'	id.${ID_MBID}.json | sort -n | tail -n1)"
 		if [[ -z ${TRCK} ]]; then
 			TRCK="01"
-		elif [[ ${TRCK} == [0-9] ]]; then
+		fi
+		if [[ ${TRCK} == [0-9] ]]; then
 			TRCK="0${TRCK}"
 		fi
 		declare -a TTL
@@ -722,7 +733,7 @@ function cd_encode {
 					ARTS="${FLAC_MANY}"
 				fi
 			fi
-			FILE="$((${FILE}+1))"
+			FILE="$((${FILE/#0}+1))"
 		done
 		echo -en "TITL: ${TITL}\n"				| tee -a .metadata
 		echo -en "ARTS: ${ARTS}\n"				| tee -a .metadata
@@ -735,7 +746,7 @@ function cd_encode {
 			fi
 			echo -en "${FILE}_T: ${TTL[${FILE/#0}]}\n"	| tee -a .metadata
 			echo -en "${FILE}_A: ${ART[${FILE/#0}]}\n"	| tee -a .metadata
-			FILE="$(expr ${FILE} + 1)"
+			FILE="$((${FILE/#0}+1))"
 		done
 	fi
 	if {
@@ -779,7 +790,7 @@ function cd_encode {
 				echo -en "\\\n    PERFORMER \"$(meta_get ${FILE}_A)\""
 			)|g" \
 			_metadata
-			FILE="$(expr ${FILE} + 1)"
+			FILE="$((${FILE/#0}+1))"
 		done
 		touch -r .metadata _metadata
 	fi
@@ -809,7 +820,7 @@ function cd_encode {
 			echo -en "${FILE}${FLAC_NDIV//\\}"					>>_metadata.tags
 			echo -en "$(meta_get ${FILE}_T)${FLAC_TDIV//\\}$(meta_get ${FILE}_A)"	>>_metadata.tags
 			echo -en "\n"								>>_metadata.tags
-			FILE="$(expr ${FILE} + 1)"
+			FILE="$((${FILE/#0}+1))"
 		done
 		if [[ $(meta_get ARTS) == ${FLAC_MANY} ]]; then
 			${SED} -i "s|^(TITLE=)${FLAC_MANY}${FLAC_TDIV}|\1|g"			_metadata.tags
