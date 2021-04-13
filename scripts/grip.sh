@@ -414,9 +414,9 @@ function cd_encode {
 			2>&1 | tee -a .audio.log
 			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
 		run_cmd "${FUNCNAME}: audio"
-		${RSYNC_U} audio.cue .audio.cue	|| return 1
-		${SED} -i "/^REM/d" audio.cue	|| return 1
-		${RSYNC_U} audio.cue _audio.cue	|| return 1
+		${RSYNC_U} --checksum audio.cue .audio.cue	|| return 1
+		${SED} -i "/^REM/d" audio.cue			|| return 1
+		${RSYNC_U} --checksum audio.cue _audio.cue	|| return 1
 		echo "${DATE}" >.exported
 	fi
 
@@ -430,11 +430,11 @@ function cd_encode {
 			${GREP} "^    INDEX 01 (${OLD})$"
 		) ]]; then
 			INDX="true"
-			${SED} -i "s|${OLD}|${NEW}|g" audio.cue
+			run_cmd "${FUNCNAME}: audio" ${SED} -i "s|${OLD}|${NEW}|g" audio.cue
 		fi
 	done
 	if ${INDX}; then
-		${RSYNC_U} audio.cue _audio.cue || return 1
+		${RSYNC_U} --checksum audio.cue _audio.cue	|| return 1
 	fi
 	if ! run_cmd "${FUNCNAME}: output" diff ${DIFF_OPTS} .audio.cue audio.cue; then
 		if ! run_cmd "${FUNCNAME}: output" diff ${DIFF_OPTS} _audio.cue audio.cue; then
@@ -493,7 +493,7 @@ function cd_encode {
 		else
 			meta_set audio.cue CATALOG ${ID_CODE}
 		fi
-		${RSYNC_U} audio.cue _audio.cue || return 1
+		${RSYNC_U} --checksum audio.cue _audio.cue || return 1
 	fi
 
 	ID_COGS="$(meta_get COGS)"
@@ -835,7 +835,7 @@ function cd_encode {
 		[[ -n $(find .metadata -newer _metadata 2>/dev/null) ]];
 	}; then
 		run_cmd "${FUNCNAME}: metadata"
-		${RSYNC_U} audio.cue _metadata
+		${RSYNC_U} --checksum audio.cue _metadata
 		${SED} -i \
 			-e "/^REM/d" \
 			-e "s|^(CATALOG)|$(
