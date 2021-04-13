@@ -619,9 +619,9 @@ function cd_encode {
 		declare IMG=
 		for FILE in ${IMGS[@]}; do
 			IMG="$(echo "${FILE}" | ${SED} \
-				-e "s|-|.|g" \
-				-e "s|^.+R-||g" \
 				-e "s|.jpeg.jpg$||g" \
+				-e "s|^.+R-||g" \
+				-e "s|-|.|g" \
 			)"
 			if [[ ! -s image.${IMG}.jpg ]]; then
 				run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${IMG}.jpg"			"${FILE}" || return 1
