@@ -340,6 +340,7 @@ function cd_encode {
 		echo "FCVR:"	>>.metadata
 		echo "BCVR:"	>>.metadata
 		echo "MCVR:"	>>.metadata
+		echo "NULL:"	>>.metadata
 		printf "%-40.40s" "### meta $(divider 2>&1)" >>.metadata
 		echo ""		>>.metadata
 		echo "CODE:"	>>.metadata
@@ -351,6 +352,12 @@ function cd_encode {
 		echo ""		>>.metadata
 	fi
 	run_cmd "${FUNCNAME}" cat .metadata
+
+	for FILE in $(meta_get NULL); do
+		if [[ ! -f ${FILE}.null ]]; then
+			touch ${FILE}.null
+		fi
+	done
 
 	if [[ ${1} == -s ]]; then
 		shift
