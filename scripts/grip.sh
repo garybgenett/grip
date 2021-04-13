@@ -907,8 +907,9 @@ function cd_encode {
 		eval run_cmd "\"${FUNCNAME}: encode\"" flac \
 			${FLAC_OPTS} \
 			\
-			--cuesheet="\"_metadata\"" \
+			--tag-from-file="\"METADATA=.metadata\"" \
 			--tag-from-file="\"CUESHEET=_metadata\"" \
+			--cuesheet="\"_metadata\"" \
 			${TAGS} \
 			\
 			--picture="\"1||||_image.icon.png\"" \
