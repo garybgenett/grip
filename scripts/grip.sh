@@ -1130,22 +1130,14 @@ function flac_export {
 	done
 	${LS} ${PREFIX}.${TRACKR}.* 2>/dev/null | while read -r FILE; do
 		DONAME="$(echo "${FILE}" | ${SED} "s|^${PREFIX//+/\\+}.([0-9]{2}).+$|\1|g")"
-		echo -en "VERSION=${DATE}${FLAC_TDIV//\\}"						>_metadata.${DONAME}
-		${SED} -n "s|^VERSION=(.+)$|\1|gp" _metadata.tags					>>_metadata.${DONAME}
-		echo -en "ALBUM="	>>_metadata.${DONAME}; ${SED} -n "s|^TITLE \"(.+)\"$|\1|gp"	_metadata >>_metadata.${DONAME}
-		echo -en "DATE="	>>_metadata.${DONAME}; ${SED} -n "s|^REM ([0-9]{4})$|\1|gp"	_metadata >>_metadata.${DONAME}
-		echo -en "TRACKNUMBER=${DONAME}\n"							>>_metadata.${DONAME}
-		${GREP} -A4 "^ +TRACK ${DONAME} AUDIO$" _metadata |
-			${SED} \
-				-e "/^ +TRACK [0-9]+ AUDIO$/d" \
-				-e "/^ +INDEX [0-9]+ .+$/d" \
-				-e "s|^ *||g" \
-				-e "s| \"|=|g" \
-				-e "s|\"$||g" \
-				\
-				-e "s|^PERFORMER|ARTIST|g" \
-				-e "/^ISRC /d" \
-			>>_metadata.${DONAME}
+		cat /dev/null						>_metadata.${DONAME}
+		echo -en "VERSION=${DATE}${FLAC_TDIV//\\}"		>>_metadata.${DONAME}
+		${SED} -n "s|^VERSION=(.+)$|\1|gp" _metadata.tags	>>_metadata.${DONAME}
+		echo -en "ALBUM=$(meta_get TITL)\n"			>>_metadata.${DONAME}
+		echo -en "DATE=$(meta_get YEAR)\n"			>>_metadata.${DONAME}
+		echo -en "TRACKNUMBER=${DONAME}\n"			>>_metadata.${DONAME}
+		echo -en "TITLE=$(meta_get ${DONAME}_T)\n"		>>_metadata.${DONAME}
+		echo -en "ARTIST=$(meta_get ${DONAME}_A)\n"		>>_metadata.${DONAME}
 		run_cmd "${FUNCNAME}" metaflac \
 			--import-tags-from="_metadata.${DONAME}" \
 			--import-picture-from="1||||_image.icon.png" \
