@@ -419,6 +419,23 @@ function cd_encode {
 		${RSYNC_U} audio.cue _audio.cue	|| return 1
 		echo "${DATE}" >.exported
 	fi
+
+	declare INDX="false"
+	for FILE in $(meta_get INDX); do
+		declare TRK="$(echo "${FILE}" | ${SED} "s|^([0-9]+)/([0-9:]+)/([0-9:]+)$|\1|g")"
+		declare OLD="$(echo "${FILE}" | ${SED} "s|^([0-9]+)/([0-9:]+)/([0-9:]+)$|\2|g")"
+		declare NEW="$(echo "${FILE}" | ${SED} "s|^([0-9]+)/([0-9:]+)/([0-9:]+)$|\3|g")"
+		if [[ -n $(
+			${GREP} -A2 "^  TRACK ${TRK} AUDIO$" audio.cue |
+			${GREP} "^    INDEX 01 (${OLD})$"
+		) ]]; then
+			INDX="true"
+			${SED} -i "s|${OLD}|${NEW}|g" audio.cue
+		fi
+	done
+	if ${INDX}; then
+		${RSYNC_U} audio.cue _audio.cue || return 1
+	fi
 	if ! run_cmd "${FUNCNAME}: output" diff ${DIFF_OPTS} .audio.cue audio.cue; then
 		if ! run_cmd "${FUNCNAME}: output" diff ${DIFF_OPTS} _audio.cue audio.cue; then
 			return 1
@@ -764,6 +781,7 @@ function cd_encode {
 		echo -en "ARTS: ${ARTS}\n"				| tee -a .metadata
 		echo -en "YEAR: ${YEAR}\n"				| tee -a .metadata
 		echo -en "TRCK: ${TRCK}\n"				| tee -a .metadata
+		echo -en "INDX: ${INDX}\n"				| tee -a .metadata
 		FILE="1"
 		while (( ${FILE} <= ${TRCK} )); do
 			if [[ ${FILE} == [0-9] ]]; then
