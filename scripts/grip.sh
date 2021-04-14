@@ -231,6 +231,7 @@ function vlc_encode {
 	# https://wiki.videolan.org/VLC_HowTo/Rip_a_DVD
 	#	https://en.wikibooks.org/wiki/MPlayer#Rip_DVD_to_raw_video
 	#	https://www.naturalborncoder.com/miscellaneous/2012/01/31/adding-cover-art-to-video-files
+	# https://www.themoviedb.org
 	ENCODER="$(which vlc) -vvv --play-and-exit --no-repeat --no-loop --intf dummy"
 #>>>	RIPOPTS=":sout='#transcode{vcodec=mp2v,vb=4096,acodec=mp2a,ab=192,scale=1,channels=2,deinterlace,audio-sync}:std{access=file, mux=ps,dst="${OUTPUT}.mpg"}'
 	RIPOPTS=":sout='#transcode{vcodec=xvid,vb=896,acodec=mp3lame,ab=128,audio-sync,deinterlace}:standard{access=file,mux=ts,dst=${OUTPUT}.avi}'"
