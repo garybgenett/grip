@@ -292,9 +292,9 @@ function cd_cuefile {
 		echo -en "    INDEX 01 ${TTL_M}:${TTL_S}:${TTL_F}\n"
 		echo -en "           + ${IDX_M}:${IDX_S}:${IDX_F}\n" 1>&2
 		echo -en "\n" 1>&2
-		TTL_F="${TTL_F/#0}";
-		TTL_S="${TTL_S/#0}";
-		TTL_M="${TTL_M/#0}";
+		TTL_F="${TTL_F/#0}"; IDX_F="${IDX_F/#0}";
+		TTL_S="${TTL_S/#0}"; IDX_S="${IDX_S/#0}";
+		TTL_M="${TTL_M/#0}"; IDX_M="${IDX_M/#0}";
 		TTL_F="$((${TTL_F}+${IDX_F}))"; (( ${TTL_F} >= ${FRAMES_PER_SECOND} )) && { TTL_S="$((${TTL_S}+1))"; TTL_F="$((${TTL_F}-${FRAMES_PER_SECOND}))"; }
 		TTL_S="$((${TTL_S}+${IDX_S}))"; (( ${TTL_S} >= ${SECOND_PER_MINUTE} )) && { TTL_M="$((${TTL_M}+1))"; TTL_S="$((${TTL_S}-${SECOND_PER_MINUTE}))"; }
 		TTL_M="$((${TTL_M}+${IDX_M}))";
