@@ -77,13 +77,13 @@ declare ID_FCVR=
 declare ID_BCVR=
 declare ID_MCVR=
 
-declare ID_DISC= ; declare ID_DISC_CHARS="[a-zA-Z0-9_.-]{28}"
 declare ID_CODE= ; declare ID_CODE_CHARS="[0-9]{13}"
+declare ID_DISC= ; declare ID_DISC_CHARS="[a-zA-Z0-9_.-]{28}"
 declare ID_MBID= ; declare ID_MBID_CHARS="[0-9a-f-]{36}"
 
 declare ID_COGS= ; declare ID_COGS_CHARS="https?://.+"
 declare ID_CIMG= ; declare ID_CIMG_CHARS="https?://.+"
-declare ID_CNUM=
+declare ID_CNUM= ; declare ID_CNUM_CHARS="[0-9]+"
 
 ########################################
 
@@ -353,12 +353,6 @@ function cd_encode {
 	fi
 	run_cmd "${FUNCNAME}" cat .metadata
 
-	for FILE in $(meta_get NULL); do
-		if [[ ! -f ${FILE}.null ]]; then
-			touch ${FILE}.null
-		fi
-	done
-
 	if [[ ${1} == -s ]]; then
 		shift
 		declare SAFE_LIST="
@@ -455,6 +449,12 @@ function cd_encode {
 		echo "${DATE}" >.exported
 	fi
 
+	for FILE in $(meta_get NULL); do
+		if [[ ! -f ${FILE}.null ]]; then
+			touch ${FILE}.null
+		fi
+	done
+
 	declare INDX="false"
 	for FILE in $(meta_get INDX); do
 		declare TRK="$(echo "${FILE}" | ${SED} "s|^([0-9]+)/([0-9:]+)/([0-9:]+)$|\1|g")"
@@ -477,26 +477,6 @@ function cd_encode {
 		fi
 	elif ${LL} _audio.cue 2>/dev/null; then
 		return 1
-	fi
-
-	ID_DISC="$(meta_get DISC)"
-	if {
-		[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]] &&
-		[[ ${ID_DISC} != null ]];
-	}; then
-		run_cmd "${FUNCNAME}: disc"
-		echo -en "CDINDEX: $(which cdda2wav) -info-only -device ${SOURCE}\n"
-		if [[ -n ${ID_DISC} ]]; then
-			echo -en "CDINDEX: ${ID_DISC}\n"
-		fi
-		read -p "CDINDEX> " ID_DISC
-		if {
-			[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]] &&
-			[[ ${ID_DISC} != null ]];
-		}; then
-			return 1
-		fi
-		meta_set DISC ${ID_DISC}
 	fi
 
 	ID_CODE="$(meta_get CODE)"
@@ -529,6 +509,26 @@ function cd_encode {
 			meta_set audio.cue CATALOG ${ID_CODE}
 		fi
 		${RSYNC_U} --checksum audio.cue _audio.cue || return 1
+	fi
+
+	ID_DISC="$(meta_get DISC)"
+	if {
+		[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]] &&
+		[[ ${ID_DISC} != null ]];
+	}; then
+		run_cmd "${FUNCNAME}: disc"
+		echo -en "CDINDEX: $(which cdda2wav) -info-only -device ${SOURCE}\n"
+		if [[ -n ${ID_DISC} ]]; then
+			echo -en "CDINDEX: ${ID_DISC}\n"
+		fi
+		read -p "CDINDEX> " ID_DISC
+		if {
+			[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]] &&
+			[[ ${ID_DISC} != null ]];
+		}; then
+			return 1
+		fi
+		meta_set DISC ${ID_DISC}
 	fi
 
 	ID_COGS="$(meta_get COGS)"
@@ -585,19 +585,27 @@ function cd_encode {
 
 	ID_MBID="$(meta_get MBID)"
 	if {
-		{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; } ||
-		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
+		{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; };
 	}; then
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"	#>>> || return 1
-		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"						#>>> || return 1
 		strip_file mb.${ID_CODE}.html
-		strip_file mb.${ID_DISC}.html
 		if {
-			{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; } ||
-			{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
+			{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; };
 		}; then
 			${LL} mb.${ID_CODE}.html*
+			return 1
+		fi
+	fi
+	if {
+		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
+	}; then
+		run_cmd "${FUNCNAME}: mbid"
+		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"						#>>> || return 1
+		strip_file mb.${ID_DISC}.html
+		if {
+			{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
+		}; then
 			${LL} mb.${ID_DISC}.html*
 			return 1
 		fi
