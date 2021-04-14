@@ -588,7 +588,7 @@ function cd_encode {
 		{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; };
 	}; then
 		run_cmd "${FUNCNAME}: mbid"
-		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"	#>>> || return 1
+		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"					|| return 1
 		strip_file mb.${ID_CODE}.html
 		if {
 			{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; };
@@ -601,7 +601,7 @@ function cd_encode {
 		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
 	}; then
 		run_cmd "${FUNCNAME}: mbid"
-		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"						#>>> || return 1
+		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"										|| return 1
 		strip_file mb.${ID_DISC}.html
 		if {
 			{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
@@ -665,7 +665,7 @@ function cd_encode {
 		[[ ${ID_CIMG} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: images"
-		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_CNUM}.html"				"${ID_CIMG}" #>>> || return 1
+		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_CNUM}.html"				"${ID_CIMG}"							|| return 1
 		strip_file image.${ID_CNUM}.html
 		if {
 			[[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]];
@@ -691,7 +691,7 @@ function cd_encode {
 				-e "s|-|.|g" \
 			)"
 			if [[ ! -s image.${IMG}.jpg ]]; then
-				run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${IMG}.jpg"			"${FILE}" || return 1
+				run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${IMG}.jpg"			"${FILE}"							|| return 1
 			fi
 		done
 		touch _image.${ID_CNUM}.${DATE}
@@ -701,9 +701,9 @@ function cd_encode {
 		[[ ${ID_MBID} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: images"
-		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.json"				http://coverartarchive.org/release/${ID_MBID}		#>>> || return 1
-#>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.front.jpg"				http://coverartarchive.org/release/${ID_MBID}/front	|| return 1
-#>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.back.jpg"				http://coverartarchive.org/release/${ID_MBID}/back	|| return 1
+		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.json"				http://coverartarchive.org/release/${ID_MBID}			|| return 1
+#>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.front.jpg"				http://coverartarchive.org/release/${ID_MBID}/front		|| return 1
+#>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.back.jpg"				http://coverartarchive.org/release/${ID_MBID}/back		|| return 1
 		strip_file image.${ID_MBID}.json
 		if {
 			[[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]];
@@ -717,7 +717,7 @@ function cd_encode {
 #>>>		declare MEDI=($(jq --raw-output '.images[] | select(.types[]? | contains("Medium")) | .id'			image.${ID_MBID}.json))
 		for FILE in ${IMGS[@]}; do
 			if [[ ! -s image.${ID_MBID}.${FILE}.jpg ]]; then
-				run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.${FILE}.jpg"	http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg || return 1
+				run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.${FILE}.jpg"	http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg	|| return 1
 			fi
 		done
 		touch _image.${ID_MBID}.${DATE}
