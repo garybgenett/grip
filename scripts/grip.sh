@@ -485,6 +485,7 @@ function cd_encode {
 		[[ ${ID_CODE} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: code"
+		echo -en "BARCODE: $(which cdda2wav) -info-only -device ${SOURCE}\n"
 		FILE="$(${SED} -n "s|^CATALOG (.+)$|\1|gp" audio.cue)"
 		if [[ -n ${FILE} ]]; then
 			echo -en "BARCODE: ${FILE} (audio.cue)\n"
@@ -539,7 +540,12 @@ function cd_encode {
 		[[ ${ID_COGS} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: cogs"
-		echo -en "DISCOGS (url): https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
+		if {
+			[[ -n ${ID_CODE} ]] &&
+			[[ ${ID_CODE} != null ]];
+		}; then
+			echo -en "DISCOGS (url): https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
+		fi
 		if [[ -n ${ID_COGS} ]]; then
 			echo -en "DISCOGS (url): ${ID_COGS}\n"
 		fi
@@ -571,22 +577,30 @@ function cd_encode {
 		fi
 		meta_set CIMG ${ID_CIMG}
 	fi
-	if {
+	if { {
+		[[ -n ${ID_CNUM} ]] &&
+		[[ ${ID_CNUM} != null ]];
+	} && {
 		{ [[ ! -s id.${ID_CNUM}.html ]] && [[ ! -f id.${ID_CNUM}.html.null ]]; };
-	}; then
+	}; }; then
 		run_cmd "${FUNCNAME}: cogs"
 		run_cmd "${FUNCNAME}: cogs" ${WGET_C} --output-document="id.${ID_CNUM}.html" "${ID_COGS}" || return 1
 		strip_file id.${ID_CNUM}.html
-		if [[ ! -s id.${ID_CNUM}.html ]]; then
+		if {
+			{ [[ ! -s id.${ID_CNUM}.html ]] && [[ ! -f id.${ID_CNUM}.html.null ]]; };
+		}; then
 			${LL} id.${ID_CNUM}.html*
 			return 1
 		fi
 	fi
 
 	ID_MBID="$(meta_get MBID)"
-	if {
+	if { {
+		[[ -n ${ID_CODE} ]] &&
+		[[ ${ID_CODE} != null ]];
+	} && {
 		{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; };
-	}; then
+	}; }; then
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"					|| return 1
 		strip_file mb.${ID_CODE}.html
@@ -597,9 +611,12 @@ function cd_encode {
 			return 1
 		fi
 	fi
-	if {
+	if { {
+		[[ -n ${ID_DISC} ]] &&
+		[[ ${ID_DISC} != null ]];
+	} && {
 		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
-	}; then
+	}; }; then
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"										|| return 1
 		strip_file mb.${ID_DISC}.html
@@ -636,10 +653,13 @@ function cd_encode {
 		fi
 		meta_set MBID ${ID_MBID}
 	fi
-	if {
+	if { {
+		[[ -n ${ID_MBID} ]] &&
+		[[ ${ID_MBID} != null ]];
+	} && {
 		{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; } ||
 		{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; };
-	}; then
+	}; }; then
 		run_cmd "${FUNCNAME}: mbid"
 #>>>		run_cmd "${FUNCNAME}: mbid" $(which curl) --verbose --remote-time --output "id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"							|| return 1
 		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"									|| return 1
