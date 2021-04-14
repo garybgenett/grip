@@ -378,6 +378,9 @@ function cd_encode {
 				for FILE in ${SAFE_LIST}; do
 					echo "\\( -path ./${FILE} -prune \\) -o "
 				done
+				for FILE in $(meta_get NAME); do
+					echo "\\( -path ./${FILE}.\* -prune \\) -o "
+				done
 				) -print \
 			| ${SED} "s|^\./||g" | sort
 		)
