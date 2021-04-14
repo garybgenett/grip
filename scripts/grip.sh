@@ -679,16 +679,18 @@ function cd_encode {
 	ID_FCVR="$(meta_get FCVR)"
 	ID_BCVR="$(meta_get BCVR)"
 	ID_MCVR="$(meta_get MCVR)"
-	if {
+	if { {
 		[[ ! -f $(${LS} _image.${ID_CNUM}.[0-9-]* 2>/dev/null | tail -n1) ]] &&
 		[[ ${ID_COGS} != null ]] &&
 		[[ ${ID_CIMG} != null ]];
-	}; then
+	} && {
+		{ [[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]]; };
+	}; }; then
 		run_cmd "${FUNCNAME}: images"
 		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_CNUM}.html"				"${ID_CIMG}"							|| return 1
 		strip_file image.${ID_CNUM}.html
 		if {
-			[[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]];
+			{ [[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]]; };
 		}; then
 			${LL} image.${ID_CNUM}.html*
 			return 1
@@ -716,17 +718,19 @@ function cd_encode {
 		done
 		touch _image.${ID_CNUM}.${DATE}
 	fi
-	if {
+	if { {
 		[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]* 2>/dev/null | tail -n1) ]] &&
 		[[ ${ID_MBID} != null ]];
-	}; then
+	} && {
+		{ [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; };
+	}; }; then
 		run_cmd "${FUNCNAME}: images"
 		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.json"				http://coverartarchive.org/release/${ID_MBID}			|| return 1
 #>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.front.jpg"				http://coverartarchive.org/release/${ID_MBID}/front		|| return 1
 #>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.back.jpg"				http://coverartarchive.org/release/${ID_MBID}/back		|| return 1
 		strip_file image.${ID_MBID}.json
 		if {
-			[[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]];
+			{ [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; };
 		}; then
 			${LL} image.${ID_MBID}.json*
 			return 1
