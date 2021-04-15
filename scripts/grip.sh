@@ -369,7 +369,11 @@ function cd_encode {
 		"
 		run_cmd "${FUNCNAME}" ${LL} --directory ${SAFE_LIST}
 		run_cmd "${FUNCNAME}" ${LL} --directory $(
-			eval find ./ -mindepth 1 -maxdepth 1 $(
+			eval find ./ -maxdepth 1 -empty \
+			| ${SED} "s|^\./||g" | sort
+		)
+		run_cmd "${FUNCNAME}" ${LL} --directory $(
+			eval find ./ -maxdepth 1 $(
 				for FILE in ${SAFE_LIST}; do
 					echo "\\( -path ./${FILE} -prune \\) -o "
 				done
