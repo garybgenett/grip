@@ -679,10 +679,10 @@ function cd_encode {
 	ID_BCVR="$(meta_get BCVR)"
 	ID_MCVR="$(meta_get MCVR)"
 	if { {
-		[[ ! -f $(${LS} _image.${ID_CNUM}.[0-9-]* 2>/dev/null | tail -n1) ]] &&
 		[[ ${ID_COGS} != null ]] &&
 		[[ ${ID_CIMG} != null ]];
 	} && {
+		[[ ! -f $(${LS} _image.${ID_CNUM}.[0-9-]* 2>/dev/null | tail -n1) ]] ||
 		{ [[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]]; };
 	}; }; then
 		run_cmd "${FUNCNAME}: images"
@@ -718,9 +718,9 @@ function cd_encode {
 		touch _image.${ID_CNUM}.${DATE}
 	fi
 	if { {
-		[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]* 2>/dev/null | tail -n1) ]] &&
 		[[ ${ID_MBID} != null ]];
 	} && {
+		[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]* 2>/dev/null | tail -n1) ]] ||
 		{ [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; };
 	}; }; then
 		run_cmd "${FUNCNAME}: images"
