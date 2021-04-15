@@ -545,10 +545,7 @@ function cd_encode {
 		[[ ${ID_COGS} != null ]];
 	}; then
 		run_cmd "${FUNCNAME}: cogs"
-		if {
-			[[ -n ${ID_CODE} ]] &&
-			[[ ${ID_CODE} != null ]];
-		}; then
+		if [[ ${ID_CODE} != null ]]; then
 			echo -en "DISCOGS (url): https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
 		fi
 		if [[ -n ${ID_COGS} ]]; then
@@ -583,7 +580,7 @@ function cd_encode {
 		meta_set CIMG ${ID_CIMG}
 	fi
 	if { {
-		[[ -n ${ID_CNUM} ]] &&
+		[[ -z $(echo "${ID_CNUM}" | ${GREP} -o "^${ID_CNUM_CHARS}$") ]] &&
 		[[ ${ID_CNUM} != null ]];
 	} && {
 		{ [[ ! -s id.${ID_CNUM}.html ]] && [[ ! -f id.${ID_CNUM}.html.null ]]; };
@@ -601,7 +598,6 @@ function cd_encode {
 
 	ID_MBID="$(meta_get MBID)"
 	if { {
-		[[ -n ${ID_CODE} ]] &&
 		[[ ${ID_CODE} != null ]];
 	} && {
 		{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; };
@@ -617,7 +613,6 @@ function cd_encode {
 		fi
 	fi
 	if { {
-		[[ -n ${ID_DISC} ]] &&
 		[[ ${ID_DISC} != null ]];
 	} && {
 		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
@@ -659,7 +654,6 @@ function cd_encode {
 		meta_set MBID ${ID_MBID}
 	fi
 	if { {
-		[[ -n ${ID_MBID} ]] &&
 		[[ ${ID_MBID} != null ]];
 	} && {
 		{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; } ||
