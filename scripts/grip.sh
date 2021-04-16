@@ -43,6 +43,7 @@ declare CDDB="-1"
 
 declare PARANOIA_OPTS="proof"
 declare CD_SPEED="6"
+declare CD_SPEED_RESCUE="1"
 
 declare FLAC_MANY="Various Artists"
 declare FLAC_TDIV=" \/\/ "	# no dashes (-); they will break the regular expression validation below
@@ -395,42 +396,40 @@ function cd_encode {
 	}; then
 		run_cmd "${FUNCNAME}: audio"
 		cat /dev/null >.audio.log
-#>>> wav >
+#>>> version (cdda) >
 		run_cmd "${FUNCNAME}: audio" $(which cdparanoia)	--version	2>&1 | tee -a .audio.log
 		run_cmd "${FUNCNAME}: audio" $(which cdda2wav)		--version	2>&1 | tee -a .audio.log
-#>>>
+#>>> version (cdda) <
+#>>> version (shntool) >
 #		run_cmd "${FUNCNAME}: audio" $(which shntool)		-v		2>&1 | tee -a .audio.log
-#>>> wav <
-#>>> cue >
+#>>> version (shntool) <
+#>>> version (cdda/cdir) >
 		run_cmd "${FUNCNAME}: audio" $(which cdir)		-V		2>&1 | tee -a .audio.log
 		run_cmd "${FUNCNAME}: audio" $(which cdir) \
 			-D -n -d ${SOURCE} \
 			2>&1 | tee -a .audio.log
 			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
-#>>> cue <>
+#>>> version (cdda/cdir) <
+#>>> cue (cdir) >
 #		echo -en "FILE \"audio.wav\" WAVE\n" >audio.cue
 #		run_cmd "${FUNCNAME}: audio" cd_cuefile					2>&1 | tee -a .audio.log
 #		run_cmd "${FUNCNAME}: audio" cd_cuefile \
 #			>>audio.cue 2>/dev/null
-#>>> cue <>
+#>>> cue (cdir) <
+#>>> cue (shntool) >
 #		run_cmd "${FUNCNAME}: audio" $(which shncue) \
-#			-D -i wav -c audio.track*.wav \
+#			-D -i wav -c audio_*.wav \
 #			2>&1 | tee -a .audio.log
 #			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
 #		run_cmd "${FUNCNAME}: audio" $(which shncue) \
-#			-i wav -c audio.track*.wav \
+#			-i wav -c audio_*.wav \
 #			>audio.cue 2>/dev/null
 #		${SED} -i \
 #			-e "s|^(FILE \").+(\" WAVE)$|\1audio.wav\2|g" \
 #			-e "s|^(    INDEX [0-9]{2} )([0-9]:.+)$|\10\2|g" \
 #			audio.cue
-#>>> cue <
-#>>> wav >
-#		run_cmd "${FUNCNAME}: audio" $(which shnjoin) \
-#			-D -O always -i wav -o wav -e -a audio audio.track*.wav \
-#			2>&1 | tee -a .audio.log
-#			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
-#>>>
+#>>> cue (shntool) <
+#>>> wav/cue (cdda) >
 		run_cmd "${FUNCNAME}: audio" $(which cdda2wav) \
 			-verbose-level all \
 			-speed ${CD_SPEED} \
@@ -444,7 +443,26 @@ function cd_encode {
 			-device ${SOURCE} \
 			2>&1 | tee -a .audio.log
 			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
-#>>> wav <
+#>>> wav/cue (cdda) <
+#>>> wav/cue (cdda/shntool) >
+#		run_cmd "${FUNCNAME}: audio" $(which cdda2wav) \
+#			-verbose-level all \
+#			-speed ${CD_SPEED_RESCUE} \
+#			-paranoia \
+#			-paraopts ${PARANOIA_OPTS} \
+#			-output-format wav \
+#			-alltracks \
+#			-cuefile \
+#			-device ${SOURCE} \
+#			2>&1 | tee -a .audio.log
+#			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
+#>>> wav/cue (cdda/shntool) <
+#>>> wav (shntool) >
+#		run_cmd "${FUNCNAME}: audio" $(which shnjoin) \
+#			-D -O always -i wav -o wav -e -a audio audio_*.wav \
+#			2>&1 | tee -a .audio.log
+#			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
+#>>> wav (shntool) <
 		run_cmd "${FUNCNAME}: audio"
 		${RSYNC_U} --checksum audio.cue .audio.cue		|| return 1
 		${SED} -i "/^REM/d" audio.cue				|| return 1
