@@ -511,7 +511,7 @@ function cd_encode {
 		fi
 	done
 	if ${INDX}; then
-		${RSYNC_U} --checksum audio.cue _audio.cue	|| return 1
+		${RSYNC_U} --checksum audio.cue _audio.cue || return 1
 	fi
 	if ! run_cmd "${FUNCNAME}: output" diff ${DIFF_OPTS} .audio.cue audio.cue; then
 		if ! run_cmd "${FUNCNAME}: output" diff ${DIFF_OPTS} _audio.cue audio.cue; then
@@ -854,6 +854,7 @@ function cd_encode {
 		declare TITL="$(jq --raw-output '.title'			id.${ID_MBID}.json)"
 		declare YEAR="$(jq --raw-output '.date'				id.${ID_MBID}.json | ${SED} "s|^([^-]+).*$|\1|g")"
 		declare TRCK="$(jq --raw-output '.media[].tracks[] | .position'	id.${ID_MBID}.json | sort -n | tail -n1)"
+		declare INDX="$(meta_get INDX)"
 		if [[ -z ${TRCK} ]]; then
 			TRCK="01"
 		fi
