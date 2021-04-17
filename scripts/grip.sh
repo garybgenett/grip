@@ -221,9 +221,9 @@ function go_fetch {
 	declare LCL="${1}" && shift
 	declare RMT="${1}" && shift
 	declare SLP="$(((${RANDOM}%10)+3))"
-	declare AGT="Mozilla/5.0"
-	${WGET_C}	--user-agent="${AGT}" --output-document="${LCL}" "${RMT}"			||
-	$(which curl)	--user-agent "${AGT}" --verbose --remote-time --output "${LCL}" "${RMT}"	|| return 1
+	declare AGT="${SCRIPT}/${DATE} (${USER}@${HOSTNAME}.net)"
+	run_cmd "${FUNCNAME}" ${WGET_C}		--user-agent="${AGT}" --output-document="${LCL}" "${RMT}"			||
+	run_cmd "${FUNCNAME}" $(which curl)	--user-agent "${AGT}" --verbose --remote-time --output "${LCL}" "${RMT}"	|| return 1
 	echo -en "sleeping for "
 	while (( ${SLP} > 0 )); do
 		echo -en "${SLP}, "
