@@ -215,6 +215,25 @@ function strip_file {
 	return 0
 }
 
+########################################
+
+function go_fetch {
+	declare LCL="${1}" && shift
+	declare RMT="${1}" && shift
+	declare SLP="$(((${RANDOM}%10)+3))"
+	declare AGT="Mozilla/5.0"
+	${WGET_C}	--user-agent="${AGT}" --output-document="${LCL}" "${RMT}"			||
+	$(which curl)	--user-agent "${AGT}" --verbose --remote-time --output "${LCL}" "${RMT}"	|| return 1
+	echo -en "sleeping for "
+	while (( ${SLP} > 0 )); do
+		echo -en "${SLP}, "
+		sleep 1
+		SLP="$((${SLP}-1))"
+	done
+	echo -en "done.\n"
+	return 0
+}
+
 ################################################################################
 
 function dvd_rescue {
@@ -604,7 +623,7 @@ function cd_encode {
 		{ [[ ! -s id.${ID_CNUM}.html ]] && [[ ! -f id.${ID_CNUM}.html.null ]]; };
 	}; }; then
 		run_cmd "${FUNCNAME}: cogs"
-		run_cmd "${FUNCNAME}: cogs" ${WGET_C} --output-document="id.${ID_CNUM}.html" "${ID_COGS}" || return 1
+		run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_CNUM}.html" "${ID_COGS}" || return 1
 		strip_file id.${ID_CNUM}.html
 		if {
 			{ [[ ! -s id.${ID_CNUM}.html ]] && [[ ! -f id.${ID_CNUM}.html.null ]]; };
@@ -621,7 +640,7 @@ function cd_encode {
 		{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; };
 	}; }; then
 		run_cmd "${FUNCNAME}: mbid"
-		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}"					|| return 1
+		run_cmd "${FUNCNAME}: mbid" go_fetch "mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}" || return 1
 		strip_file mb.${ID_CODE}.html
 		if {
 			{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; };
@@ -636,7 +655,7 @@ function cd_encode {
 		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
 	}; }; then
 		run_cmd "${FUNCNAME}: mbid"
-		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}"										|| return 1
+		run_cmd "${FUNCNAME}: mbid" go_fetch "mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}" || return 1
 		strip_file mb.${ID_DISC}.html
 		if {
 			{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
@@ -678,9 +697,8 @@ function cd_encode {
 		{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; };
 	}; }; then
 		run_cmd "${FUNCNAME}: mbid"
-#>>>		run_cmd "${FUNCNAME}: mbid" $(which curl) --verbose --remote-time --output "id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"							|| return 1
-		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}"									|| return 1
-		run_cmd "${FUNCNAME}: mbid" ${WGET_C} --output-document="id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json"	|| return 1
+		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}" || return 1
+		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json" || return 1
 		strip_file id.${ID_MBID}.html
 		strip_file id.${ID_MBID}.json
 		if {
@@ -704,7 +722,7 @@ function cd_encode {
 		{ [[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]]; };
 	}; }; then
 		run_cmd "${FUNCNAME}: images"
-		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_CNUM}.html"				"${ID_CIMG}"							|| return 1
+		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_CNUM}.html" "${ID_CIMG}" || return 1
 		strip_file image.${ID_CNUM}.html
 		if {
 			{ [[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]]; };
@@ -730,7 +748,7 @@ function cd_encode {
 				-e "s|-|.|g" \
 			)"
 			if [[ ! -s image.${IMG}.jpg ]]; then
-				run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${IMG}.jpg"			"${FILE}"							|| return 1
+				run_cmd "${FUNCNAME}: images" go_fetch "image.${IMG}.jpg" "${FILE}" || return 1
 			fi
 		done
 		touch _image.${ID_CNUM}.${DATE}
@@ -742,9 +760,9 @@ function cd_encode {
 		{ [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; };
 	}; }; then
 		run_cmd "${FUNCNAME}: images"
-		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.json"				http://coverartarchive.org/release/${ID_MBID}			|| return 1
-#>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.front.jpg"				http://coverartarchive.org/release/${ID_MBID}/front		|| return 1
-#>>>		run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.back.jpg"				http://coverartarchive.org/release/${ID_MBID}/back		|| return 1
+		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.json"		http://coverartarchive.org/release/${ID_MBID}		|| return 1
+#>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.front.jpg"	http://coverartarchive.org/release/${ID_MBID}/front	|| return 1
+#>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.back.jpg"	http://coverartarchive.org/release/${ID_MBID}/back	|| return 1
 		strip_file image.${ID_MBID}.json
 		if {
 			{ [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; };
@@ -752,13 +770,13 @@ function cd_encode {
 			${LL} image.${ID_MBID}.json*
 			return 1
 		fi
-		declare IMGS=($(jq --raw-output '.images[] | .id'								image.${ID_MBID}.json))
-#>>>		declare FRNT=($(jq --raw-output '.images[] | select(.types[]? | contains("Front")) | .id'			image.${ID_MBID}.json))
-#>>>		declare BACK=($(jq --raw-output '.images[] | select(.types[]? | contains("Back")) | .id'			image.${ID_MBID}.json))
-#>>>		declare MEDI=($(jq --raw-output '.images[] | select(.types[]? | contains("Medium")) | .id'			image.${ID_MBID}.json))
+		declare IMGS=($(jq --raw-output '.images[] | .id'						image.${ID_MBID}.json))
+#>>>		declare FRNT=($(jq --raw-output '.images[] | select(.types[]? | contains("Front")) | .id'	image.${ID_MBID}.json))
+#>>>		declare BACK=($(jq --raw-output '.images[] | select(.types[]? | contains("Back")) | .id'	image.${ID_MBID}.json))
+#>>>		declare MEDI=($(jq --raw-output '.images[] | select(.types[]? | contains("Medium")) | .id'	image.${ID_MBID}.json))
 		for FILE in ${IMGS[@]}; do
 			if [[ ! -s image.${ID_MBID}.${FILE}.jpg ]]; then
-				run_cmd "${FUNCNAME}: images" ${WGET_C} --output-document="image.${ID_MBID}.${FILE}.jpg"	http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg	|| return 1
+				run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.${FILE}.jpg" http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg || return 1
 			fi
 		done
 		touch _image.${ID_MBID}.${DATE}
