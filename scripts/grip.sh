@@ -57,6 +57,7 @@ declare FLAC_BLCK="8"
 declare ID_NAME=
 declare ID_FILE_CHARS="-#+:="
 declare ID_EXTR_CHARS="():;,&!?%'"
+declare ID_ESCP_CHARS="&"
 declare ID_NAME_CHARS="[-._a-zA-Z0-9+]+"
 declare ID_TITL_CHARS="$(echo "${ID_NAME_CHARS}" | ${SED} "s|\]\+?$||g")${FLAC_TDIV//\\}${FLAC_NDIV//\\}${ID_EXTR_CHARS}]+"
 declare ID_ARTS_CHARS="$(echo "${ID_NAME_CHARS}" | ${SED} "s|\]\+?$||g")${FLAC_ADIV//\\}${ID_EXTR_CHARS}]+"
@@ -956,8 +957,8 @@ function cd_encode {
 				FILE="0${FILE}"
 			fi
 			${SED} -i "s|^(  TRACK ${FILE} AUDIO)$|\1$(
-				echo -en "\\\n    TITLE \"$(meta_get ${FILE}_T)\""
-				echo -en "\\\n    PERFORMER \"$(meta_get ${FILE}_A)\""
+				echo -en "\\\n    TITLE \"$(meta_get ${FILE}_T | ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\""
+				echo -en "\\\n    PERFORMER \"$(meta_get ${FILE}_A ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\""
 			)|g" \
 			_metadata
 			FILE="$((${FILE/#0}+1))"
