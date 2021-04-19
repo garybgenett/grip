@@ -116,10 +116,12 @@ if [[ ${1} == -+([a-z]) ]]; then
 	shift
 fi
 
-[[ ${1} == +([0-9])	]] && TRACKN="${1}"				&& shift
-[[ ${1} == +([A-Za-z])	]] && A_LANG="${1}"				&& shift
-[[ ${1} == +([A-Za-z])	]] && S_LANG="${1}"				&& shift
-[[ -b ${1} || -f ${1}	]] && SOURCE="$(realpath --no-symlinks ${1})"	&& shift
+if [[ ${RTYPE} != -l ]]; then
+	[[ ${1} == +([0-9])	]] && TRACKN="${1}"				&& shift
+	[[ ${1} == +([A-Za-z])	]] && A_LANG="${1}"				&& shift
+	[[ ${1} == +([A-Za-z])	]] && S_LANG="${1}"				&& shift
+	[[ -b ${1} || -f ${1}	]] && SOURCE="$(realpath --no-symlinks ${1})"	&& shift
+fi
 
 ########################################
 
@@ -1318,10 +1320,21 @@ function flac_playlist {
 	return 0
 }
 
+########################################
+
+function flac_list {
+	${LS} -A "${@}" |
+		${SED} -n "s|^([^.]+)[.](([^.]+)[.])?([^.]+)[.]flac|\1: \4 - \3|gp" |
+		sort
+	return 0
+}
+
+
 ################################################################################
 
   if { [[ -s ${SOURCE} ]] && [[ -n $(file ${SOURCE} | ${GREP} "FLAC") ]]; }; then	flac_unpack	"${SOURCE}" "${@}" || exit 1
 elif { [[ -s ${SOURCE} ]] && [[ ${SOURCE/%.m3u} != ${SOURCE} ]]; }; then		flac_playlist	"${SOURCE}" "${@}" || exit 1
+elif [[ ${RTYPE} == -l ]]; then		flac_list	"${@}" || exit 1
 elif [[ ${RTYPE} == -d ]]; then		dvd_rescue	"${@}" || exit 1
 elif [[ ${RTYPE} == -v ]]; then		vlc_encode	"${@}" || exit 1
 elif [[ ${RTYPE} == -m ]]; then		mp_encode	"${@}" || exit 1
