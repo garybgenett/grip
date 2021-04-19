@@ -932,6 +932,7 @@ function cd_encode {
 	}; then
 		return 1
 	fi
+	ID_NAME="$(meta_get NAME)"
 
 	if {
 		[[ ! -f _metadata ]] ||
