@@ -967,7 +967,7 @@ function cd_encode {
 	fi
 	if {
 		[[ ! -f _metadata.tags ]] ||
-		[[ -n $(find .metadata.tags -newer _metadata 2>/dev/null) ]];
+		[[ -n $(find .metadata -newer _metadata.tags 2>/dev/null) ]];
 	}; then
 		run_cmd "${FUNCNAME}: metadata"
 		cat /dev/null									>_metadata.tags
