@@ -1324,8 +1324,30 @@ function flac_playlist {
 ########################################
 
 function flac_list {
-	${LS} -A "${@}" |
-		${SED} -n "s|^([^.]+)[.](([^.]+)[.])?([^.]+)[.]flac|\1: \4 - \3|gp" |
+#>>>
+#	${LS} -A "${@}" |
+#		${SED} -n "s|^([^.]+)[.](([^.]+)[.])?([^.]+)[.]flac|\4 \1 \3|gp" |
+#		sort |
+#		while read -r FILE
+#	do
+#		#           5     + 45     + 30			= 80
+#		printf "%-4.4s %-44.44s %-30.30s\n"		${FILE//^^^/ }
+#	done
+#	echo -en "\n"
+#>>>
+	declare -a FILES
+	${LS} -A "${@}" | ${GREP} "[.]flac$" | while read -r FILE; do
+		FILE="$(
+			metaflac --export-tags-to=- ${FILE} 2>&1 |
+			tr '\n' '|' |
+			${SED} "s|^.*ALBUM=([^|]+).*ARTIST=([^|]+).*DATE=([^|]+).*$|\3\|\1\|\2\|${FILE}|g"
+		)"
+		IFS=$'\n' FILES=($(echo -en "${FILE//|/\\n}")); unset IFS
+		#           5     + 25     + 20     + 30	= 80
+		printf "%-4.4s %-24.24s %-19.19s %-30.30s\n"	"${FILES[0]}" "${FILES[1]}" "${FILES[2]}" "${FILES[3]}"
+		#           5     + 45     + 30			= 80
+#>>>		printf "%-4.4s %-44.44s %-30.30s\n"		"${FILES[0]}" "${FILES[1]}" "${FILES[2]}"
+	done |
 		sort
 	return 0
 }
