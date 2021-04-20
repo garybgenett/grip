@@ -1154,12 +1154,13 @@ function flac_unpack {
 		return 0
 	fi
 	if [[ ${ADDARG} == -x ]]; then
+		${MKDIR} ${UNPACK}.dir
 		run_cmd "${FUNCNAME}" metaflac \
 			--block-number="${FLAC_BLCK}" \
 			--export-picture-to=- \
 			${UNPACK} \
-			| tar --xz -xvv -f - -O .metadata \
-			>${UNPACK}.metadata
+			| (cd ${UNPACK}.dir; tar --xz -xvv .metadata)
+		${RSYNC_U} --checksum ${UNPACK}.dir/.metadata ${UNPACK}.metadata
 		run_cmd "${FUNCNAME}" cat ${UNPACK}.metadata
 		return 0
 	fi
