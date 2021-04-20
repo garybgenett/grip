@@ -81,11 +81,8 @@ declare ID_MCVR=
 
 declare ID_CODE= ; declare ID_CODE_CHARS="[0-9]{13}"
 declare ID_DISC= ; declare ID_DISC_CHARS="[a-zA-Z0-9_.-]{28}"
+declare ID_COGS= ; declare ID_COGS_CHARS="m?[0-9]+"
 declare ID_MBID= ; declare ID_MBID_CHARS="[0-9a-f-]{36}"
-
-declare ID_COGS= ; declare ID_COGS_CHARS="https?://.+"
-declare ID_CIMG= ; declare ID_CIMG_CHARS="https?://.+"
-declare ID_CNUM= ; declare ID_CNUM_CHARS="[0-9]+"
 
 ########################################
 
@@ -371,7 +368,6 @@ function cd_encode {
 		echo "DISC:"	>>.metadata
 		echo "MBID:"	>>.metadata
 		echo "COGS:"	>>.metadata
-		echo "CIMG:"	>>.metadata
 		printf "%-40.40s" "### tags $(divider 2>&1)" >>.metadata
 		echo ""		>>.metadata
 	fi
@@ -578,8 +574,6 @@ function cd_encode {
 	fi
 
 	ID_COGS="$(meta_get COGS)"
-	ID_CIMG="$(meta_get CIMG)"
-	ID_CNUM="${ID_COGS/#*\/}"
 	if {
 		[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
 		[[ ${ID_COGS} != null ]];
@@ -589,10 +583,14 @@ function cd_encode {
 			echo -en "DISCOGS (url): https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
 		fi
 		if [[ -n ${ID_COGS} ]]; then
-			echo -en "DISCOGS (url): ${ID_COGS}\n"
+			if [[ ${ID_COGS//[0-9]} == m ]]; then	echo -en "DISCOGS (url): https://www.discogs.com/master/${ID_COGS/#m}\n"
+			else					echo -en "DISCOGS (url): https://www.discogs.com/release/${ID_COGS}\n"
+			fi
 		fi
 		read -p "DISCOGS (url)> " ID_COGS
-		ID_CNUM="${ID_COGS/#*\/}"
+		if [[ -n $(echo "${ID_COGS}" | ${GREP} "/master/") ]]; then	ID_COGS="m${ID_COGS/#*\/}"
+		else								ID_COGS="${ID_COGS/#*\/}"
+		fi
 		if {
 			[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
 			[[ ${ID_COGS} != null ]];
@@ -601,37 +599,20 @@ function cd_encode {
 		fi
 		meta_set COGS ${ID_COGS}
 	fi
-	if {
-		[[ -z $(echo "${ID_CIMG}" | ${GREP} -o "^${ID_CIMG_CHARS}$") ]] &&
-		[[ ${ID_CIMG} != null ]];
-	}; then
-		run_cmd "${FUNCNAME}: cogs"
-		echo -en "DISCOGS (image): ${ID_COGS}\n"
-		if [[ -n ${ID_CIMG} ]]; then
-			echo -en "DISCOGS (image): ${ID_CIMG}\n"
-		fi
-		read -p "DISCOGS (image)> " ID_CIMG
-		if {
-			[[ -z $(echo "${ID_CIMG}" | ${GREP} -o "^${ID_CIMG_CHARS}$") ]] &&
-			[[ ${ID_CIMG} != null ]];
-		}; then
-			return 1
-		fi
-		meta_set CIMG ${ID_CIMG}
-	fi
 	if { {
-		[[ -z $(echo "${ID_CNUM}" | ${GREP} -o "^${ID_CNUM_CHARS}$") ]] &&
-		[[ ${ID_CNUM} != null ]];
+		[[ ${ID_COGS} != null ]];
 	} && {
-		{ [[ ! -s id.${ID_CNUM}.html ]] && [[ ! -f id.${ID_CNUM}.html.null ]]; };
+		{ [[ ! -s id.${ID_COGS}.html ]] && [[ ! -f id.${ID_COGS}.html.null ]]; };
 	}; }; then
 		run_cmd "${FUNCNAME}: cogs"
-		run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_CNUM}.html" "${ID_COGS}" || return 1
-		strip_file id.${ID_CNUM}.html
+		if [[ ${ID_COGS//[0-9]} == m ]]; then	run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_COGS}.html" "https://www.discogs.com/master/${ID_COGS/#m}" || return 1
+		else					run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_COGS}.html" "https://www.discogs.com/release/${ID_COGS}" || return 1
+		fi
+		strip_file id.${ID_COGS}.html
 		if {
-			{ [[ ! -s id.${ID_CNUM}.html ]] && [[ ! -f id.${ID_CNUM}.html.null ]]; };
+			{ [[ ! -s id.${ID_COGS}.html ]] && [[ ! -f id.${ID_COGS}.html.null ]]; };
 		}; then
-			${LL} id.${ID_CNUM}.html*
+			${LL} id.${ID_COGS}.html*
 			return 1
 		fi
 	fi
@@ -718,26 +699,27 @@ function cd_encode {
 	ID_BCVR="$(meta_get BCVR)"
 	ID_MCVR="$(meta_get MCVR)"
 	if { {
-		[[ ${ID_COGS} != null ]] &&
-		[[ ${ID_CIMG} != null ]];
+		[[ ${ID_COGS} != null ]];
 	} && {
-		[[ ! -f $(${LS} _image.${ID_CNUM}.[0-9-]* 2>/dev/null | tail -n1) ]] ||
-		{ [[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]]; };
+		[[ ! -f $(${LS} _image.${ID_COGS}.[0-9-]* 2>/dev/null | tail -n1) ]] ||
+		{ [[ ! -s image.${ID_COGS}.html ]] && [[ ! -f image.${ID_COGS}.html.null ]]; };
 	}; }; then
 		run_cmd "${FUNCNAME}: images"
-		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_CNUM}.html" "${ID_CIMG}" || return 1
-		strip_file image.${ID_CNUM}.html
+		if [[ ${ID_COGS//[0-9]} == m ]]; then	run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_COGS}.html" "https://www.discogs.com/master/${ID_COGS/#m}/images" || return 1
+		else					run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_COGS}.html" "https://www.discogs.com/release/${ID_COGS}/images" || return 1
+		fi
+		strip_file image.${ID_COGS}.html
 		if {
-			{ [[ ! -s image.${ID_CNUM}.html ]] && [[ ! -f image.${ID_CNUM}.html.null ]]; };
+			{ [[ ! -s image.${ID_COGS}.html ]] && [[ ! -f image.${ID_COGS}.html.null ]]; };
 		}; then
-			${LL} image.${ID_CNUM}.html*
+			${LL} image.${ID_COGS}.html*
 			return 1
 		fi
 		declare IMGS=($(${SED} \
 				-e "s| \"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
 				-e "s|src=\"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
 				-e "s|content=\"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
-				image.${ID_CNUM}.html |
+				image.${ID_COGS}.html |
 			${GREP} "^https://img.discogs.com/" |
 			${GREP} "quality\(90\)" |
 			${GREP} "format\(jpeg\)" |
@@ -754,7 +736,7 @@ function cd_encode {
 				run_cmd "${FUNCNAME}: images" go_fetch "image.${IMG}.jpg" "${FILE}" || return 1
 			fi
 		done
-		touch _image.${ID_CNUM}.${DATE}
+		touch _image.${ID_COGS}.${DATE}
 	fi
 	if { {
 		[[ ${ID_MBID} != null ]];
