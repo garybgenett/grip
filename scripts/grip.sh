@@ -1353,12 +1353,33 @@ function flac_list {
 	return 0
 }
 
+########################################
+
+function flac_metadata {
+	if [[ ${1} == -l ]]; then
+		shift
+		for FILE in *.flac; do
+			${_SELF} ${FILE} -l 2>&1
+		done |
+			${GREP} -B1 -A30 "export-picture-to" |
+			${PAGER} +/export-picture-to
+	else
+		${MKDIR} .metadata
+		for FILE in *.flac; do
+			${_SELF} ${FILE} -x || return 1
+			${RSYNC_U} --checksum ${FILE}.metadata .metadata/${FILE/%.flac}.metadata || return 1
+		done
+		${LL} .metadata
+	fi
+	return 0
+}
 
 ################################################################################
 
   if { [[ -s ${SOURCE} ]] && [[ -n $(file ${SOURCE} | ${GREP} "FLAC") ]]; }; then	flac_unpack	"${SOURCE}" "${@}" || exit 1
 elif { [[ -s ${SOURCE} ]] && [[ ${SOURCE/%.m3u} != ${SOURCE} ]]; }; then		flac_playlist	"${SOURCE}" "${@}" || exit 1
 elif [[ ${RTYPE} == -l ]]; then		flac_list	"${@}" || exit 1
+elif [[ ${RTYPE} == -y ]]; then		flac_metadata	"${@}" || exit 1
 elif [[ ${RTYPE} == -d ]]; then		dvd_rescue	"${@}" || exit 1
 elif [[ ${RTYPE} == -v ]]; then		vlc_encode	"${@}" || exit 1
 elif [[ ${RTYPE} == -m ]]; then		mp_encode	"${@}" || exit 1
