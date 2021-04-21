@@ -1382,11 +1382,10 @@ function flac_rebuild {
 		touch -r .metadata/${FILE/%.flac}.metadata \
 			${FILE}.dir/${FILE}.dir/_metadata \
 			${FILE}.dir/${FILE}.dir/_metadata.tags
-#>>>		(cd ${FILE}.dir/${FILE}.dir && ${_SELF} -c)
-		(cd ${FILE}.dir/${FILE}.dir && PROMPT="simple" ${SHELL} && vdiff -r ../ ./)
+#>>>		(cd ${FILE}.dir/${FILE}.dir && ${_SELF} -c) && diff ${DIFF_OPTS} ${FILE}.dir ${FILE}.dir/${FILE}.dir >${FILE}.diff 2>&1
+		(cd ${FILE}.dir/${FILE}.dir && PROMPT="simple" ${SHELL} && vdiff -r ../ ./) && read -p "CONTINUE"
 		touch -r ${FILE} ${FILE}.dir/${FILE}.dir/${FILE}
 		${RSYNC_U} --checksum ${FILE}.dir/${FILE}.dir/${FILE} ${FILE}
-		read -p "CONTINUE"
 		${RM} ${FILE}.dir
 	done
 	return 0
