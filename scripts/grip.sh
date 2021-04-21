@@ -12,7 +12,7 @@ declare S_LANG=""
 
 ################################################################################
 
-declare DATE="$(date --iso)"
+declare DATE="${DATE:-$(date --iso)}"
 
 declare SECOND_PER_MINUTE="60"
 declare FRAMES_PER_SECOND="75"
@@ -1387,21 +1387,30 @@ function flac_rebuild {
 		done
 		return 0
 	fi
+	declare AUTO="false"
+	if [[ ${1} == -a ]]; then
+		AUTO="true"
+		shift
+	fi
 	for FILE in "${@}"; do
 		[[ -z $(file ${FILE} | ${GREP} "FLAC") ]] && continue
 		${_SELF} ${FILE}
 		${RSYNC_U} --checksum ${FILE} ${FILE}.dir/${FILE}
 		${_SELF} ${FILE}.dir/${FILE}
 		${RSYNC_U} --checksum .metadata/${FILE/%.flac}.metadata ${FILE}.dir/${FILE}.dir/.metadata
-		touch -r .metadata/${FILE/%.flac}.metadata \
-			${FILE}.dir/${FILE}.dir/_metadata \
-			${FILE}.dir/${FILE}.dir/_metadata.tags
-#>>>		(cd ${FILE}.dir/${FILE}.dir && ${_SELF} -c) && diff ${DIFF_OPTS} ${FILE}.dir ${FILE}.dir/${FILE}.dir >${FILE}.diff 2>&1
-		(cd ${FILE}.dir/${FILE}.dir && PROMPT="simple" ${SHELL} && vdiff -r ../ ./) && read -p "CONTINUE"
+		${RM} ${FILE}.dir/${FILE}.dir/_metadata*
+		if ${AUTO}; then
+			(cd ${FILE}.dir/${FILE}.dir && EDITOR="cat" DATE="$(cat .exported)" ${_SELF} -c)
+			diff ${DIFF_OPTS} ${FILE}.dir ${FILE}.dir/${FILE}.dir >${FILE}.diff 2>&1
+		else
+			(cd ${FILE}.dir/${FILE}.dir && EDITOR="cat" DATE="$(cat .exported)" PROMPT="simple" ${SHELL})
+			vdiff -r ${FILE}.dir ${FILE}.dir/${FILE}.dir
+			read -p "CONTINUE"
+		fi
 		touch -r ${FILE} ${FILE}.dir/${FILE}.dir/${FILE}
 		${RSYNC_U} --checksum ${FILE}.dir/${FILE}.dir/${FILE} ${FILE}
 		${RM} ${FILE}.dir
-#>>>		${_SELF} ${FILE}
+		${AUTO} && ${_SELF} ${FILE}
 	done
 	return 0
 }
