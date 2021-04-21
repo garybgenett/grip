@@ -114,7 +114,7 @@ if [[ ${1} == -+([a-z]) ]]; then
 	shift
 fi
 
-if [[ ${RTYPE} != -l ]]; then
+if [[ ${RTYPE} != -[lr] ]]; then
 	[[ ${1} == +([0-9])	]] && TRACKN="${1}"				&& shift
 	[[ ${1} == +([A-Za-z])	]] && A_LANG="${1}"				&& shift
 	[[ ${1} == +([A-Za-z])	]] && S_LANG="${1}"				&& shift
@@ -1356,12 +1356,48 @@ function flac_metadata {
 	return 0
 }
 
+########################################
+
+function flac_rebuild {
+	set -e
+	if [[ ${1} == -m ]]; then
+		shift
+		for FILE in "${@}"; do
+			touch -r ${FILE} ${FILE}.touch
+		done
+		${EDITOR} "${@}"
+		for FILE in "${@}"; do
+			touch -r ${FILE}.touch ${FILE}
+			${RM} ${FILE}.touch
+		done
+		return 0
+	fi
+	for FILE in "${@}"; do
+		[[ -z $(file ${FILE} | ${GREP} "FLAC") ]] && continue
+		${_SELF} ${FILE}
+		${RSYNC_U} --checksum ${FILE} ${FILE}.dir/${FILE}
+		${_SELF} ${FILE}.dir/${FILE}
+		${RSYNC_U} --checksum .metadata/${FILE/%.flac}.metadata ${FILE}.dir/${FILE}.dir/.metadata
+		touch -r .metadata/${FILE/%.flac}.metadata \
+			${FILE}.dir/${FILE}.dir/_metadata \
+			${FILE}.dir/${FILE}.dir/_metadata.tags
+#>>>		(cd ${FILE}.dir/${FILE}.dir && ${_SELF} -c)
+		(cd ${FILE}.dir/${FILE}.dir && PROMPT="simple" ${SHELL} && vdiff -r ../ ./)
+		touch -r ${FILE} ${FILE}.dir/${FILE}.dir/${FILE}
+		${RSYNC_U} --checksum ${FILE}.dir/${FILE}.dir/${FILE} ${FILE}
+		read -p "CONTINUE"
+		${RM} ${FILE}.dir
+	done
+	return 0
+}
+
 ################################################################################
 
   if { [[ -s ${SOURCE} ]] && [[ -n $(file ${SOURCE} | ${GREP} "FLAC") ]]; }; then	flac_unpack	"${SOURCE}" "${@}" || exit 1
 elif { [[ -s ${SOURCE} ]] && [[ ${SOURCE/%.m3u} != ${SOURCE} ]]; }; then		flac_playlist	"${SOURCE}" "${@}" || exit 1
 elif [[ ${RTYPE} == -l ]]; then		flac_list	"${@}" || exit 1
 elif [[ ${RTYPE} == -y ]]; then		flac_metadata	"${@}" || exit 1
+elif [[ ${RTYPE} == -r ]]; then		flac_rebuild	"${@}" || exit 1
 elif [[ ${RTYPE} == -d ]]; then		dvd_rescue	"${@}" || exit 1
 elif [[ ${RTYPE} == -v ]]; then		vlc_encode	"${@}" || exit 1
 elif [[ ${RTYPE} == -m ]]; then		mp_encode	"${@}" || exit 1
