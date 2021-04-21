@@ -1397,6 +1397,7 @@ function flac_rebuild {
 		touch -r ${FILE} ${FILE}.dir/${FILE}.dir/${FILE}
 		${RSYNC_U} --checksum ${FILE}.dir/${FILE}.dir/${FILE} ${FILE}
 		${RM} ${FILE}.dir
+#>>>		${_SELF} ${FILE}
 	done
 	return 0
 }
