@@ -913,7 +913,7 @@ function cd_encode {
 		if { [[ -z $(meta_get YEAR) ]] || [[ -z $(meta_get YEAR | ${GREP} -o "^${ID_YEAR_CHARS}$") ]]; }; then echo -en "YEAR: "; meta_get YEAR; FAIL="true"; fi
 		if { [[ -z $(meta_get TRCK) ]] || [[ -z $(meta_get TRCK | ${GREP} -o "^${ID_TRCK_CHARS}$") ]]; }; then echo -en "TRCK: "; meta_get TRCK; FAIL="true"; fi
 		FILE="1"
-		while (( ${FILE} <= $(meta_get TRCK) )); do
+		while (( ${FILE} <= $(meta_get TRCK | ${SED} "s|^0||g") )); do
 			if [[ ${FILE} == [0-9] ]]; then
 				FILE="0${FILE}"
 			fi
@@ -948,7 +948,7 @@ function cd_encode {
 			)\1|g" \
 			_metadata
 		FILE="1"
-		while (( ${FILE} <= $(meta_get TRCK) )); do
+		while (( ${FILE} <= $(meta_get TRCK | ${SED} "s|^0||g") )); do
 			if [[ ${FILE} == [0-9] ]]; then
 				FILE="0${FILE}"
 			fi
@@ -975,7 +975,7 @@ function cd_encode {
 		echo -en "ARTIST=$(meta_get ARTS)\n"						>>_metadata.tags
 		echo -en "DATE=$(meta_get YEAR)\n"						>>_metadata.tags
 		FILE="1"
-		while (( ${FILE} <= $(meta_get TRCK) )); do
+		while (( ${FILE} <= $(meta_get TRCK | ${SED} "s|^0||g") )); do
 			if [[ ${FILE} == [0-9] ]]; then
 				FILE="0${FILE}"
 			fi
