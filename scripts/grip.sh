@@ -1350,6 +1350,7 @@ function flac_metadata {
 		for FILE in *.flac; do
 			${_SELF} ${FILE} -x || return 1
 			${RSYNC_U} --checksum ${FILE}.metadata .metadata/${FILE/%.flac}.metadata || return 1
+			${RM} ${FILE}.dir ${FILE}.metadata
 		done
 		${LL} .metadata
 	fi
