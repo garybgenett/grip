@@ -483,7 +483,11 @@ function cd_encode {
 #>>> wav (shntool) <
 		run_cmd "${FUNCNAME}: audio"
 		${RSYNC_U} --checksum audio.cue .audio.cue		|| return 1
-		${SED} -i "/^REM/d" audio.cue				|| return 1
+		${SED} -i \
+			-e "/^REM /d" \
+			-e "/^    PREGAP /d" \
+			-e "/^    FLAGS DCP$/d" \
+			audio.cue					|| return 1
 		if ! diff ${DIFF_OPTS} .audio.cue audio.cue; then
 			${RSYNC_U} --checksum audio.cue _audio.cue	|| return 1
 		fi
