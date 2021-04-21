@@ -81,8 +81,8 @@ declare ID_MCVR=
 
 declare ID_CODE= ; declare ID_CODE_CHARS="[0-9]{13}"
 declare ID_DISC= ; declare ID_DISC_CHARS="[a-zA-Z0-9_.-]{28}"
-declare ID_COGS= ; declare ID_COGS_CHARS="m?[0-9]+"
 declare ID_MBID= ; declare ID_MBID_CHARS="[0-9a-f-]{36}"
+declare ID_COGS= ; declare ID_COGS_CHARS="m?[0-9]+"
 
 ########################################
 
@@ -366,8 +366,8 @@ function cd_encode {
 		echo ""		>>.metadata
 		echo "CODE:"	>>.metadata
 		echo "DISC:"	>>.metadata
-		echo "COGS:"	>>.metadata
 		echo "MBID:"	>>.metadata
+		echo "COGS:"	>>.metadata
 		printf "%-40.40s" "### tags $(divider 2>&1)" >>.metadata
 		echo ""		>>.metadata
 	fi
@@ -573,50 +573,6 @@ function cd_encode {
 		meta_set DISC ${ID_DISC}
 	fi
 
-	ID_COGS="$(meta_get COGS)"
-	if {
-		[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
-		[[ ${ID_COGS} != null ]];
-	}; then
-		run_cmd "${FUNCNAME}: cogs"
-		if [[ ${ID_CODE} != null ]]; then
-			echo -en "DISCOGS (url): https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
-		fi
-		if [[ -n ${ID_COGS} ]]; then
-			if [[ ${ID_COGS//[0-9]} == m ]]; then	echo -en "DISCOGS (url): https://www.discogs.com/master/${ID_COGS/#m}\n"
-			else					echo -en "DISCOGS (url): https://www.discogs.com/release/${ID_COGS}\n"
-			fi
-		fi
-		read -p "DISCOGS (url)> " ID_COGS
-		if [[ -n $(echo "${ID_COGS}" | ${GREP} "/master/") ]]; then	ID_COGS="m${ID_COGS/#*\/}"
-		else								ID_COGS="${ID_COGS/#*\/}"
-		fi
-		if {
-			[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
-			[[ ${ID_COGS} != null ]];
-		}; then
-			return 1
-		fi
-		meta_set COGS ${ID_COGS}
-	fi
-	if { {
-		[[ ${ID_COGS} != null ]];
-	} && {
-		{ [[ ! -s id.${ID_COGS}.html ]] && [[ ! -f id.${ID_COGS}.html.null ]]; };
-	}; }; then
-		run_cmd "${FUNCNAME}: cogs"
-		if [[ ${ID_COGS//[0-9]} == m ]]; then	run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_COGS}.html" "https://www.discogs.com/master/${ID_COGS/#m}" || return 1
-		else					run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_COGS}.html" "https://www.discogs.com/release/${ID_COGS}" || return 1
-		fi
-		strip_file id.${ID_COGS}.html
-		if {
-			{ [[ ! -s id.${ID_COGS}.html ]] && [[ ! -f id.${ID_COGS}.html.null ]]; };
-		}; then
-			${LL} id.${ID_COGS}.html*
-			return 1
-		fi
-	fi
-
 	ID_MBID="$(meta_get MBID)"
 	if { {
 		[[ ${ID_CODE} != null ]];
@@ -695,9 +651,81 @@ function cd_encode {
 		fi
 	fi
 
+	ID_COGS="$(meta_get COGS)"
+	if {
+		[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
+		[[ ${ID_COGS} != null ]];
+	}; then
+		run_cmd "${FUNCNAME}: cogs"
+		if [[ ${ID_CODE} != null ]]; then
+			echo -en "DISCOGS (url): https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
+		fi
+		if [[ -n ${ID_COGS} ]]; then
+			if [[ ${ID_COGS//[0-9]} == m ]]; then	echo -en "DISCOGS (url): https://www.discogs.com/master/${ID_COGS/#m}\n"
+			else					echo -en "DISCOGS (url): https://www.discogs.com/release/${ID_COGS}\n"
+			fi
+		fi
+		read -p "DISCOGS (url)> " ID_COGS
+		if [[ -n $(echo "${ID_COGS}" | ${GREP} "/master/") ]]; then	ID_COGS="m${ID_COGS/#*\/}"
+		else								ID_COGS="${ID_COGS/#*\/}"
+		fi
+		if {
+			[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
+			[[ ${ID_COGS} != null ]];
+		}; then
+			return 1
+		fi
+		meta_set COGS ${ID_COGS}
+	fi
+	if { {
+		[[ ${ID_COGS} != null ]];
+	} && {
+		{ [[ ! -s id.${ID_COGS}.html ]] && [[ ! -f id.${ID_COGS}.html.null ]]; };
+	}; }; then
+		run_cmd "${FUNCNAME}: cogs"
+		if [[ ${ID_COGS//[0-9]} == m ]]; then	run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_COGS}.html" "https://www.discogs.com/master/${ID_COGS/#m}" || return 1
+		else					run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_COGS}.html" "https://www.discogs.com/release/${ID_COGS}" || return 1
+		fi
+		strip_file id.${ID_COGS}.html
+		if {
+			{ [[ ! -s id.${ID_COGS}.html ]] && [[ ! -f id.${ID_COGS}.html.null ]]; };
+		}; then
+			${LL} id.${ID_COGS}.html*
+			return 1
+		fi
+	fi
+
 	ID_FCVR="$(meta_get FCVR)"
 	ID_BCVR="$(meta_get BCVR)"
 	ID_MCVR="$(meta_get MCVR)"
+	if { {
+		[[ ${ID_MBID} != null ]];
+	} && {
+		[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]* 2>/dev/null | tail -n1) ]] ||
+		{ [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; };
+	}; }; then
+		run_cmd "${FUNCNAME}: images"
+		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.json"		http://coverartarchive.org/release/${ID_MBID}		|| return 1
+#>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.front.jpg"	http://coverartarchive.org/release/${ID_MBID}/front	|| return 1
+#>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.back.jpg"	http://coverartarchive.org/release/${ID_MBID}/back	|| return 1
+		strip_file image.${ID_MBID}.json
+		if {
+			{ [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; };
+		}; then
+			${LL} image.${ID_MBID}.json*
+			return 1
+		fi
+		declare IMGS=($(jq --raw-output '.images[] | .id'						image.${ID_MBID}.json))
+#>>>		declare FRNT=($(jq --raw-output '.images[] | select(.types[]? | contains("Front")) | .id'	image.${ID_MBID}.json))
+#>>>		declare BACK=($(jq --raw-output '.images[] | select(.types[]? | contains("Back")) | .id'	image.${ID_MBID}.json))
+#>>>		declare MEDI=($(jq --raw-output '.images[] | select(.types[]? | contains("Medium")) | .id'	image.${ID_MBID}.json))
+		for FILE in ${IMGS[@]}; do
+			if [[ ! -s image.${ID_MBID}.${FILE}.jpg ]]; then
+				run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.${FILE}.jpg" http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg || return 1
+			fi
+		done
+		touch _image.${ID_MBID}.${DATE}
+	fi
 	if { {
 		[[ ${ID_COGS} != null ]];
 	} && {
@@ -737,34 +765,6 @@ function cd_encode {
 			fi
 		done
 		touch _image.${ID_COGS}.${DATE}
-	fi
-	if { {
-		[[ ${ID_MBID} != null ]];
-	} && {
-		[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]* 2>/dev/null | tail -n1) ]] ||
-		{ [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; };
-	}; }; then
-		run_cmd "${FUNCNAME}: images"
-		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.json"		http://coverartarchive.org/release/${ID_MBID}		|| return 1
-#>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.front.jpg"	http://coverartarchive.org/release/${ID_MBID}/front	|| return 1
-#>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.back.jpg"	http://coverartarchive.org/release/${ID_MBID}/back	|| return 1
-		strip_file image.${ID_MBID}.json
-		if {
-			{ [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; };
-		}; then
-			${LL} image.${ID_MBID}.json*
-			return 1
-		fi
-		declare IMGS=($(jq --raw-output '.images[] | .id'						image.${ID_MBID}.json))
-#>>>		declare FRNT=($(jq --raw-output '.images[] | select(.types[]? | contains("Front")) | .id'	image.${ID_MBID}.json))
-#>>>		declare BACK=($(jq --raw-output '.images[] | select(.types[]? | contains("Back")) | .id'	image.${ID_MBID}.json))
-#>>>		declare MEDI=($(jq --raw-output '.images[] | select(.types[]? | contains("Medium")) | .id'	image.${ID_MBID}.json))
-		for FILE in ${IMGS[@]}; do
-			if [[ ! -s image.${ID_MBID}.${FILE}.jpg ]]; then
-				run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.${FILE}.jpg" http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg || return 1
-			fi
-		done
-		touch _image.${ID_MBID}.${DATE}
 	fi
 	if {
 		[[ ! -s _image.icon.png		]] ||
