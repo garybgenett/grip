@@ -1142,7 +1142,7 @@ function flac_unpack {
 			--block-number="${FLAC_BLCK}" \
 			--export-picture-to=- \
 			${UNPACK} \
-			| tar --xz -xvv -f - -O .metadata
+			| tar --xz -xvv -f - -O .exported .metadata
 		return 0
 	fi
 	if [[ ${ADDARG} == -x ]]; then
