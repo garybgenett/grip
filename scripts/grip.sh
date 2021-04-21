@@ -114,7 +114,7 @@ if [[ ${1} == -+([a-z]) ]]; then
 	shift
 fi
 
-if [[ ${RTYPE} != -[lr] ]]; then
+if [[ ${RTYPE} != -[lry] ]]; then
 	[[ ${1} == +([0-9])	]] && TRACKN="${1}"				&& shift
 	[[ ${1} == +([A-Za-z])	]] && A_LANG="${1}"				&& shift
 	[[ ${1} == +([A-Za-z])	]] && S_LANG="${1}"				&& shift
