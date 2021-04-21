@@ -766,7 +766,7 @@ function cd_encode {
 		declare IMG=
 		for FILE in ${IMGS[@]}; do
 			IMG="$(echo "${FILE}" | ${SED} \
-				-e "s|.jpeg.jpg$||g" \
+				-e "s|.jpe?g.jpg$||g" \
 				-e "s|^.+R-||g" \
 				-e "s|-|.|g" \
 			)"
