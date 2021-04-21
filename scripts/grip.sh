@@ -711,8 +711,8 @@ function cd_encode {
 	if { {
 		[[ ${ID_MBID} != null ]];
 	} && {
-		[[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]* 2>/dev/null | tail -n1) ]] ||
-		{ [[ ! -s image.${ID_MBID}.json ]] && [[ ! -f image.${ID_MBID}.json.null ]]; };
+		{ [[ ! -f $(${LS} _image.${ID_MBID}.[0-9-]* 2>/dev/null | tail -n1) ]] ||
+		[[ ! -s image.${ID_MBID}.json ]]; } && [[ ! -f image.${ID_MBID}.json.null ]];
 	}; }; then
 		run_cmd "${FUNCNAME}: images"
 		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.json"		http://coverartarchive.org/release/${ID_MBID}		|| return 1
@@ -739,8 +739,8 @@ function cd_encode {
 	if { {
 		[[ ${ID_COGS} != null ]];
 	} && {
-		[[ ! -f $(${LS} _image.${ID_COGS}.[0-9-]* 2>/dev/null | tail -n1) ]] ||
-		{ [[ ! -s image.${ID_COGS}.html ]] && [[ ! -f image.${ID_COGS}.html.null ]]; };
+		{ [[ ! -f $(${LS} _image.${ID_COGS}.[0-9-]* 2>/dev/null | tail -n1) ]] ||
+		[[ ! -s image.${ID_COGS}.html ]]; } && [[ ! -f image.${ID_COGS}.html.null ]];
 	}; }; then
 		run_cmd "${FUNCNAME}: images"
 		if [[ ${ID_COGS//[0-9]} == m ]]; then	run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_COGS}.html" "https://www.discogs.com/master/${ID_COGS/#m}/images" || return 1
