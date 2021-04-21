@@ -366,8 +366,8 @@ function cd_encode {
 		echo ""		>>.metadata
 		echo "CODE:"	>>.metadata
 		echo "DISC:"	>>.metadata
-		echo "MBID:"	>>.metadata
 		echo "COGS:"	>>.metadata
+		echo "MBID:"	>>.metadata
 		printf "%-40.40s" "### tags $(divider 2>&1)" >>.metadata
 		echo ""		>>.metadata
 	fi
