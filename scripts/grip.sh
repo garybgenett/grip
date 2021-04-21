@@ -633,19 +633,29 @@ function cd_encode {
 	if { {
 		[[ ${ID_MBID} != null ]];
 	} && {
-		{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; } ||
-		{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; };
+		{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; };
 	}; }; then
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}" || return 1
-		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json" || return 1
 		strip_file id.${ID_MBID}.html
-		strip_file id.${ID_MBID}.json
 		if {
-			{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; } ||
-			{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; };
+			{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; };
 		}; then
 			${LL} id.${ID_MBID}.html*
+			return 1
+		fi
+	fi
+	if { {
+		[[ ${ID_MBID} != null ]];
+	} && {
+		{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; };
+	}; }; then
+		run_cmd "${FUNCNAME}: mbid"
+		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json" || return 1
+		strip_file id.${ID_MBID}.json
+		if {
+			{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; };
+		}; then
 			${LL} id.${ID_MBID}.json*
 			return 1
 		fi
