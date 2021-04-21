@@ -954,7 +954,7 @@ function cd_encode {
 			fi
 			${SED} -i "s|^(  TRACK ${FILE} AUDIO)$|\1$(
 				echo -en "\\\n    TITLE \"$(meta_get ${FILE}_T | ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\""
-				echo -en "\\\n    PERFORMER \"$(meta_get ${FILE}_A ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\""
+				echo -en "\\\n    PERFORMER \"$(meta_get ${FILE}_A | ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\""
 			)|g" \
 			_metadata
 			FILE="$((${FILE/#0}+1))"
