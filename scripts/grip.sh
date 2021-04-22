@@ -877,7 +877,7 @@ function cd_encode {
 					ARTS="${FLAC_MANY}"
 				fi
 			fi
-			FILE="$((${FILE/#0}+1))"
+			FILE="$(expr ${FILE} + 1)"
 		done
 		echo -en "TITL: ${TITL}\n"				| tee -a .metadata
 		echo -en "ARTS: ${ARTS}\n"				| tee -a .metadata
@@ -891,7 +891,7 @@ function cd_encode {
 			fi
 			echo -en "${FILE}_T: ${TTL[${FILE/#0}]}\n"	| tee -a .metadata
 			echo -en "${FILE}_A: ${ART[${FILE/#0}]}\n"	| tee -a .metadata
-			FILE="$((${FILE/#0}+1))"
+			FILE="$(expr ${FILE} + 1)"
 		done
 	fi
 	if [[ -z ${ID_NAME} ]]; then
@@ -925,7 +925,7 @@ function cd_encode {
 				echo -en "${FILE}_A: "; meta_get ${FILE}_A
 				FAIL="true"
 			fi
-			FILE="$((${FILE/#0}+1))"
+			FILE="$(expr ${FILE} + 1)"
 		done
 		${FAIL}
 	}; then
@@ -957,7 +957,7 @@ function cd_encode {
 				echo -en "\\\n    PERFORMER \"$(meta_get ${FILE}_A | ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\""
 			)|g" \
 			_metadata
-			FILE="$((${FILE/#0}+1))"
+			FILE="$(expr ${FILE} + 1)"
 		done
 		touch -r .metadata _metadata
 	fi
@@ -987,7 +987,7 @@ function cd_encode {
 			echo -en "${FILE}${FLAC_NDIV//\\}"					>>_metadata.tags
 			echo -en "$(meta_get ${FILE}_T)${FLAC_TDIV//\\}$(meta_get ${FILE}_A)"	>>_metadata.tags
 			echo -en "\n"								>>_metadata.tags
-			FILE="$((${FILE/#0}+1))"
+			FILE="$(expr ${FILE} + 1)"
 		done
 		if [[ $(meta_get ARTS) == ${FLAC_MANY} ]]; then
 			${SED} -i "s|^(TITLE=)${FLAC_MANY}${FLAC_TDIV}|\1|g"			_metadata.tags
@@ -1231,7 +1231,7 @@ function flac_export {
 			${GREP} "^    INDEX 00 00:00:00$" ${CUEDAT}
 		) ]];
 	}; then
-		COUNTR="$((${COUNTR/#0}+1))"
+		COUNTR="$(expr ${COUNTR} + 1)"
 	fi
 	eval run_cmd "${FUNCNAME}" shnsplit \
 		-D \
