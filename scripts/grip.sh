@@ -487,8 +487,9 @@ function cd_encode {
 		${RSYNC_U} --checksum audio.cue .audio.cue		|| return 1
 		${SED} -i \
 			-e "/^REM/d" \
+			-e "/^    FLAGS /d" \
+			-e "/^    ISRC /d" \
 			-e "/^    PREGAP /d" \
-			-e "/^    FLAGS DCP/d" \
 			audio.cue					|| return 1
 		if ! diff ${DIFF_OPTS} .audio.cue audio.cue; then
 			${RSYNC_U} --checksum audio.cue _audio.cue	|| return 1
