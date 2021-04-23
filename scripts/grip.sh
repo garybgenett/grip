@@ -928,9 +928,9 @@ function cd_encode {
 		${SED} -i \
 			-e "/^REM/d" \
 			-e "s|^(CATALOG)|$(
-				echo -en "TITLE \\\"$(meta_get TITL)\\\"\\\n"
-				echo -en "PERFORMER \\\"$(meta_get ARTS)\\\"\\\n"
-				echo -en "REM $(meta_get YEAR)\\\n"
+				echo -en "TITLE \\\"$(		meta_get TITL | ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\\\"\\\n"
+				echo -en "PERFORMER \\\"$(	meta_get ARTS | ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\\\"\\\n"
+				echo -en "REM $(		meta_get YEAR | ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\\\n"
 			)\1|g" \
 			_metadata
 		FILE="1"
@@ -939,8 +939,8 @@ function cd_encode {
 				FILE="0${FILE}"
 			fi
 			${SED} -i "s|^(  TRACK ${FILE} AUDIO)$|\1$(
-				echo -en "\\\n    TITLE \"$(meta_get ${FILE}_T | ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\""
-				echo -en "\\\n    PERFORMER \"$(meta_get ${FILE}_A | ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\""
+				echo -en "\\\n    TITLE \\\"$(		meta_get ${FILE}_T | ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\\\""
+				echo -en "\\\n    PERFORMER \\\"$(	meta_get ${FILE}_A | ${SED} "s|([${ID_ESCP_CHARS}])|\\\\\1|g")\\\""
 			)|g" \
 			_metadata
 			FILE="$(expr ${FILE} + 1)"
