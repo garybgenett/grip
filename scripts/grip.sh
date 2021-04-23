@@ -510,6 +510,7 @@ function cd_encode {
 	for FILE in $(meta_get NULL); do
 		if [[ ! -f ${FILE}.null ]]; then
 			touch ${FILE}.null
+			${RM} ${FILE} >/dev/null 2>&1
 		fi
 	done
 
@@ -575,14 +576,6 @@ function cd_encode {
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}" || return 1
 		strip_file mb.${ID_CODE}.html
-		if {
-			[[ ! -s mb.${ID_CODE}.html ]] ||
-			[[ -n $(${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found") ]];
-		}; then
-			${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found"
-			${LL} mb.${ID_CODE}.html*
-			return 1
-		fi
 	fi
 	if { {
 		[[ ${ID_DISC} != null ]];
@@ -592,14 +585,19 @@ function cd_encode {
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}" || return 1
 		strip_file mb.${ID_DISC}.html
-		if {
-			[[ ! -s mb.${ID_DISC}.html ]] ||
-			[[ -n $(${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "could not find the cd toc") ]];
-		}; then
-			${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "could not find the cd toc"
-			${LL} mb.${ID_DISC}.html*
-			return 1
-		fi
+	fi
+	if { {
+		{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; } ||
+		[[ -n $(${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found") ]];
+	} || {
+		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; } ||
+		[[ -n $(${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "could not find the cd toc") ]];
+	}; }; then
+		${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found"
+		${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "could not find the cd toc"
+		${LL} mb.${ID_CODE}.html*
+		${LL} mb.${ID_DISC}.html*
+		return 1
 	fi
 	if {
 		[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]] &&
@@ -635,10 +633,6 @@ function cd_encode {
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}" || return 1
 		strip_file id.${ID_MBID}.html
-		if [[ ! -s id.${ID_MBID}.html ]]; then
-			${LL} id.${ID_MBID}.html*
-			return 1
-		fi
 	fi
 	if { {
 		[[ ${ID_MBID} != null ]];
@@ -648,13 +642,16 @@ function cd_encode {
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json" || return 1
 		strip_file id.${ID_MBID}.json
-		if {
-			[[ ! -s id.${ID_MBID}.json ]] ||
-			! jq --raw-output '' id.${ID_MBID}.json >/dev/null;
-		}; then
-			${LL} id.${ID_MBID}.json*
-			return 1
-		fi
+	fi
+	if { {
+		{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; };
+	} || {
+		{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; } ||
+		! jq --raw-output '' id.${ID_MBID}.json >/dev/null;
+	}; }; then
+		${LL} id.${ID_MBID}.html*
+		${LL} id.${ID_MBID}.json*
+		return 1
 	fi
 
 	ID_COGS="$(meta_get COGS)"
@@ -693,10 +690,12 @@ function cd_encode {
 		else					run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_COGS}.html" "https://www.discogs.com/release/${ID_COGS}" || return 1
 		fi
 		strip_file id.${ID_COGS}.html
-		if [[ ! -s id.${ID_COGS}.html ]]; then
-			${LL} id.${ID_COGS}.html*
-			return 1
-		fi
+	fi
+	if {
+		{ [[ ! -s id.${ID_COGS}.html ]] && [[ ! -f id.${ID_COGS}.html.null ]]; };
+	}; then
+		${LL} id.${ID_COGS}.html*
+		return 1
 	fi
 
 	ID_FCVR="$(meta_get FCVR)"
