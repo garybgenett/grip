@@ -1034,7 +1034,7 @@ function cd_encode {
 			${FLAC_OPTS} \
 			\
 			--tag-from-file="\"METADATA=.metadata\"" \
-			--tag-from-file="\"CUESHEET=_metadata\"" \
+			--tag-from-file="\"METAFILE=_metadata\"" \
 			--cuesheet="\"_metadata\"" \
 			${TAGS} \
 			\
@@ -1059,8 +1059,8 @@ function cd_encode {
 		fi
 		run_cmd "${FUNCNAME}: info" ffmpeg -i				${ID_NAME}.flac #>>> || return 1
 		run_cmd "${FUNCNAME}: info" metaflac --list			${ID_NAME}.flac | ${GREP} -A4 "^METADATA" | ${GREP} -v "^--$" #>>> || return 1
-		run_cmd "${FUNCNAME}: info" metaflac --export-cuesheet-to=-	${ID_NAME}.flac || return 1
 		run_cmd "${FUNCNAME}: info" metaflac --export-tags-to=-		${ID_NAME}.flac || return 1
+		run_cmd "${FUNCNAME}: info" metaflac --export-cuesheet-to=-	${ID_NAME}.flac || return 1
 	fi
 
 	run_cmd "${FUNCNAME}: archive"
@@ -1165,11 +1165,6 @@ function flac_unpack {
 			--export-picture-to=- \
 			${UNPACK} \
 			| tar --xz -tvv -f -
-		run_cmd "${FUNCNAME}" metaflac \
-			--block-number="${FLAC_BLCK}" \
-			--export-picture-to=- \
-			${UNPACK} \
-			| tar --xz -xvv -f - -O .exported .metadata
 		return 0
 	fi
 	if [[ ${ADDARG} == -x ]]; then
@@ -1191,6 +1186,22 @@ function flac_unpack {
 			${UNPACK} \
 			| tar --xz -xvv -C ${UNPACK}.dir -f - \
 			|| return 1
+		function validate_file {
+			declare TAG="${1}" && shift
+			declare EXP="${1}" && shift
+			run_cmd "${FUNCNAME}" metaflac --export-tags-to=- ${UNPACK} \
+				| ${SED} -n "/^${TAG}=/,/^$/p" \
+				| ${SED} -e "s|^${TAG}=||g" -e "/^$/d" \
+				>${UNPACK}.dir/+${FUNCNAME}.${TAG}
+				[[ ${PIPESTATUS[0]} != 0 ]] && return 1
+			if [[ -s ${UNPACK}.dir/+${FUNCNAME}.${TAG} ]]; then
+				(cd ${UNPACK}.dir && run_cmd "${FUNCNAME}" diff ${DIFF_OPTS} +${FUNCNAME}.${TAG} ${EXP}) || return 1
+			fi
+			${RM} ${UNPACK}.dir/+${FUNCNAME}.${TAG}
+			return 0
+		}
+		validate_file METADATA .metadata							|| return 1
+		validate_file METAFILE _metadata							|| return 1
 		run_cmd "${FUNCNAME}" metaflac --export-cuesheet-to=${UNPACK}.dir/audio.cue		${UNPACK}		|| return 1
 		${SED} -i -e "/^REM/d" -e "s|^(FILE \").+$|\1audio.wav\" WAVE|g"			${UNPACK}.dir/audio.cue	|| return 1
 		run_cmd "${FUNCNAME}" flac --force --decode --output-name=${UNPACK}.dir/audio.wav	${UNPACK}		|| return 1
