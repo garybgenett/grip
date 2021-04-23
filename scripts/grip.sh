@@ -1388,8 +1388,7 @@ function flac_metadata {
 		for FILE in *.flac; do
 			${_SELF} ${FILE} -l 2>&1
 		done |
-			${GREP} -B1 -A30 "export-picture-to" |
-			${PAGER} +/export-picture-to
+			${PAGER} +/export-tags-to
 	else
 		${MKDIR} .metadata
 		for FILE in *.flac; do
