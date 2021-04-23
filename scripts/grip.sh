@@ -1193,9 +1193,7 @@ function flac_unpack {
 				| ${SED} -e "s|^${TAG}=||g" -e "/^$/d" \
 				>${UNPACK}.dir/+${FUNCNAME}.${TAG}
 				[[ ${PIPESTATUS[0]} != 0 ]] && return 1
-			if [[ -s ${UNPACK}.dir/+${FUNCNAME}.${TAG} ]]; then
-				(cd ${UNPACK}.dir && run_cmd "${FUNCNAME}" diff ${DIFF_OPTS} +${FUNCNAME}.${TAG} ${EXP}) || return 1
-			fi
+			(cd ${UNPACK}.dir && run_cmd "${FUNCNAME}" diff ${DIFF_OPTS} +${FUNCNAME}.${TAG} ${EXP}) || return 1
 			${RM} ${UNPACK}.dir/+${FUNCNAME}.${TAG}
 			return 0
 		}
