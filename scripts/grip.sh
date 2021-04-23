@@ -830,7 +830,6 @@ function cd_encode {
 
 	ID_NAME="$(meta_get NAME)"
 	if {
-		false
 		[[ -z $(meta_get TITL) ]] ||
 		[[ -z $(meta_get ARTS) ]] ||
 		[[ -z $(meta_get YEAR) ]] ||
