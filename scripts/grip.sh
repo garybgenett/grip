@@ -177,7 +177,7 @@ function namer {
 			-e "s|/|-|g" \
 			-e "s|\&|+|g" \
 			-e "s|: |-|g" \
-			-e "s| \(|-|g" -e "s|\)||g" \
+			-e "s| \(|-|g" -e "s|\(||g" -e "s|\)||g" \
 			-e "s|[[:space:]]+|_|g" \
 		| tr 'A-Z' 'a-z' \
 		| tr -d '\n'
@@ -1214,16 +1214,20 @@ function flac_unpack {
 				FILE="0${FILE}"
 			fi
 			if [[ ! -s $(${LS} ${UNPACK}.dir/${BASENAME}.${FILE}.* 2>/dev/null) ]]; then
-				(cd ${UNPACK}.dir && flac_export audio.wav _metadata ${BASENAME} ${FILE})	|| return 1
+				(cd ${UNPACK}.dir && flac_export ${FILE})				|| return 1
 			fi
 			if [[ -d ${DESTNAME} ]]; then
-				${RSYNC_U} ${UNPACK}.dir/${BASENAME}.${FILE}.*.flac ${DESTNAME}/		|| return 1
+				if [[ ${FILE} == +(0) ]]; then
+					FILE="*"
+				fi
+				${RSYNC_U} ${UNPACK}.dir/${BASENAME}.${FILE}.*.flac ${DESTNAME}/	|| return 1
 			fi
 		done
 	fi
 	run_cmd "${FUNCNAME}" ${LL} ${UNPACK}.dir
 	if [[ -d ${DESTNAME} ]]; then
-		(cd ${DESTNAME} && run_cmd "${FUNCNAME}" ${LL} ${BASENAME}.*.flac)
+		(run_cmd "${FUNCNAME}" cd ${UNPACK}.dir	&& ${LL} ${BASENAME}.*.flac)
+		(run_cmd "${FUNCNAME}" cd ${DESTNAME}	&& ${LL} ${BASENAME}.*.flac)
 	fi
 	return 0
 }
@@ -1231,19 +1235,11 @@ function flac_unpack {
 ########################################
 
 function flac_export {
-	declare INPUTF="${1}" && shift
-	declare CUEDAT="${1}" && shift
-	declare PREFIX="${INPUTF/%.wav}"
+	declare PREFIX="$(meta_get NAME)"
+	declare CUEDAT="_metadata"
+	declare INPUTF="audio.wav"
 	declare TRACKR="[0-9][0-9]"
 	declare COUNTR="0"
-	if {
-		[[ -n ${1} ]] &&
-		[[ ${1} != +([0-9]) ]] &&
-		[[ ${1} != -+(*) ]];
-	}; then
-		PREFIX="$(basename ${1})"
-		shift
-	fi
 	if {
 		[[ ${1} == +([0-9]) ]] &&
 		[[ ${1} != +(0) ]];
@@ -1264,11 +1260,26 @@ function flac_export {
 	}; then
 		COUNTR="$(expr ${COUNTR} + 1)"
 	fi
+	${RSYNC_U} ${CUEDAT} ${CUEDAT}.${FUNCNAME} || return 1
+	FILE="1"
+	while (( ${FILE} <= $(meta_get TRCK | ${SED} "s|^0||g") )); do
+		if [[ ${FILE} == [0-9] ]]; then
+			FILE="0${FILE}"
+		fi
+		declare MRK="$(
+			${GREP} -A2 "^  TRACK ${FILE} AUDIO$" audio.cue |
+			${SED} -n "s|^    INDEX 01 ([0-9]{2}:[0-9]{2}:[0-9]{2})$|\1|gp"
+		)"
+		for IDX in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})$"); do
+			${SED} -i "s|${MRK}|$(echo "${IDX}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})$|\1|g"):00|g" ${CUEDAT}.${FUNCNAME}
+		done
+		FILE="$(expr ${FILE} + 1)"
+	done
 	eval run_cmd "${FUNCNAME}" shnsplit \
 		-D \
 		-O always \
 		-i wav \
-		-f ${CUEDAT} \
+		-f ${CUEDAT}.${FUNCNAME} \
 		-a "\"${PREFIX}.\"" \
 		-n "\"%02d\"" \
 		-t "\"%n.%t\"" \
@@ -1291,16 +1302,17 @@ function flac_export {
 	done
 	${LS} ${PREFIX}.${TRACKR}.* 2>/dev/null | while read -r FILE; do
 		DONAME="$(echo "${FILE}" | ${SED} "s|^${PREFIX//+/\\+}.([0-9]{2}).+$|\1|g")"
-		cat /dev/null						>_metadata.${DONAME}
-		echo -en "VERSION=${DATE}${FLAC_TDIV//\\}"		>>_metadata.${DONAME}
-		${SED} -n "s|^VERSION=(.+)$|\1|gp" _metadata.tags	>>_metadata.${DONAME}
-		echo -en "ALBUM=$(meta_get TITL)\n"			>>_metadata.${DONAME}
-		echo -en "DATE=$(meta_get YEAR)\n"			>>_metadata.${DONAME}
-		echo -en "TRACKNUMBER=${DONAME}\n"			>>_metadata.${DONAME}
-		echo -en "TITLE=$(meta_get ${DONAME}_T)\n"		>>_metadata.${DONAME}
-		echo -en "ARTIST=$(meta_get ${DONAME}_A)\n"		>>_metadata.${DONAME}
+		cat /dev/null						>${CUEDAT}.${DONAME}
+		echo -en "VERSION=${DATE}${FLAC_TDIV//\\}"		>>${CUEDAT}.${DONAME}
+		[[ ! -f ${CUEDAT}.tags ]] && echo -en "(null)\n"	>>${CUEDAT}.${DONAME}
+		${SED} -n "s|^VERSION=(.+)$|\1|gp" ${CUEDAT}.tags	>>${CUEDAT}.${DONAME} 2>/dev/null
+		echo -en "ALBUM=$(meta_get TITL)\n"			>>${CUEDAT}.${DONAME}
+		echo -en "DATE=$(meta_get YEAR)\n"			>>${CUEDAT}.${DONAME}
+		echo -en "TRACKNUMBER=${DONAME}\n"			>>${CUEDAT}.${DONAME}
+		echo -en "TITLE=$(meta_get ${DONAME}_T)\n"		>>${CUEDAT}.${DONAME}
+		echo -en "ARTIST=$(meta_get ${DONAME}_A)\n"		>>${CUEDAT}.${DONAME}
 		run_cmd "${FUNCNAME}" metaflac \
-			--import-tags-from="_metadata.${DONAME}" \
+			--import-tags-from="${CUEDAT}.${DONAME}" \
 			--import-picture-from="1||||_image.icon.png" \
 			--import-picture-from="3||||_image.front.jpg" \
 			${FILE} \
