@@ -90,6 +90,7 @@ declare ID_COGS= ; declare ID_COGS_CHARS="m?[0-9]+"
 ########################################
 
 declare IMAGE_CMD="feh --scale-down --geometry 800x600"
+declare RSYNC_U="${RSYNC_U} --checksum"
 declare FLAC_OPTS="
 	--force \
 	--verify \
@@ -484,15 +485,15 @@ function cd_encode {
 #			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
 #>>> wav (shntool) <
 		run_cmd "${FUNCNAME}: audio"
-		${RSYNC_U} --checksum audio.cue .audio.cue		|| return 1
+		${RSYNC_U} audio.cue .audio.cue		|| return 1
 		${SED} -i \
 			-e "/^REM/d" \
 			-e "/^    FLAGS /d" \
 			-e "/^    ISRC /d" \
 			-e "/^    PREGAP /d" \
-			audio.cue					|| return 1
+			audio.cue			|| return 1
 		if ! diff ${DIFF_OPTS} .audio.cue audio.cue; then
-			${RSYNC_U} --checksum audio.cue _audio.cue	|| return 1
+			${RSYNC_U} audio.cue _audio.cue	|| return 1
 		fi
 		echo "${DATE}" >.exported
 	fi
@@ -541,7 +542,7 @@ function cd_encode {
 		else
 			meta_set audio.cue CATALOG ${ID_CODE}
 		fi
-		${RSYNC_U} --checksum audio.cue _audio.cue || return 1
+		${RSYNC_U} audio.cue _audio.cue || return 1
 	fi
 
 	ID_DISC="$(meta_get DISC)"
@@ -921,7 +922,7 @@ function cd_encode {
 		[[ -n $(find .metadata -newer _metadata 2>/dev/null) ]];
 	}; then
 		run_cmd "${FUNCNAME}: metadata"
-		${RSYNC_U} --checksum audio.cue _metadata
+		${RSYNC_U} audio.cue _metadata
 		${SED} -i \
 			-e "/^REM/d" \
 			-e "s|^(CATALOG)|$(
@@ -1167,7 +1168,7 @@ function flac_unpack {
 			--export-picture-to=- \
 			${UNPACK} \
 			| (cd ${UNPACK}.dir; tar --xz -vv -x .metadata)
-		${RSYNC_U} --checksum ${UNPACK}.dir/.metadata ${UNPACK}.metadata
+		${RSYNC_U} ${UNPACK}.dir/.metadata ${UNPACK}.metadata
 		run_cmd "${FUNCNAME}" cat ${UNPACK}.metadata
 		return 0
 	fi
@@ -1399,7 +1400,7 @@ function flac_metadata {
 		${MKDIR} .metadata
 		for FILE in *.flac; do
 			${_SELF} ${FILE} -x || return 1
-			${RSYNC_U} --checksum ${FILE}.metadata .metadata/${FILE/%.flac}.metadata || return 1
+			${RSYNC_U} ${FILE}.metadata .metadata/${FILE/%.flac}.metadata || return 1
 			${RM} ${FILE}.dir ${FILE}.metadata
 		done
 		${LL} .metadata
@@ -1435,9 +1436,9 @@ function flac_rebuild {
 	for FILE in "${@}"; do
 		[[ -z $(file ${FILE} | ${GREP} "FLAC") ]] && continue
 		${_SELF} ${FILE}											|| return 1
-		${RSYNC_U} --checksum ${FILE} ${FILE}.dir/${FILE}							|| return 1
+		${RSYNC_U} ${FILE} ${FILE}.dir/${FILE}									|| return 1
 		${_SELF} ${FILE}.dir/${FILE}										|| return 1
-		${RSYNC_U} --checksum .metadata/${FILE/%.flac}.metadata ${FILE}.dir/${FILE}.dir/.metadata		|| return 1
+		${RSYNC_U} .metadata/${FILE/%.flac}.metadata ${FILE}.dir/${FILE}.dir/.metadata				|| return 1
 		${RM} ${FILE}.dir/${FILE}.dir/_metadata*								|| return 1
 		${UNPK} && continue
 		if ${AUTO}; then
@@ -1449,7 +1450,7 @@ function flac_rebuild {
 			read -p "CONTINUE"
 		fi
 		touch -r ${FILE} ${FILE}.dir/${FILE}.dir/${FILE}							|| return 1
-		${RSYNC_U} --checksum ${FILE}.dir/${FILE}.dir/${FILE} ${FILE}						|| return 1
+		${RSYNC_U} ${FILE}.dir/${FILE}.dir/${FILE} ${FILE}							|| return 1
 		${RM} ${FILE}.dir											|| return 1
 		${AUTO} && { ${_SELF} ${FILE}										|| return 1; }
 	done
