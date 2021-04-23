@@ -813,8 +813,10 @@ function cd_encode {
 			sleep 0.1; jobs 1 2>/dev/null || return 1
 			sleep 0.1; jobs 1 2>/dev/null || return 1
 		}
-		${LS} image.*.{png,jpg} 2>/dev/null
-		echo -en "_image.front.jpg\n"
+		if [[ ! -f _image.front.jpg ]]; then
+			touch _image.front.jpg
+		fi
+		${LL} _image.front.jpg image.*.{png,jpg} 2>/dev/null
 		image_select front	FCVR ${ID_FCVR}; ID_FCVR="$(meta_get FCVR)"
 		image_select back	BCVR ${ID_BCVR}; ID_BCVR="$(meta_get BCVR)"
 		image_select media	MCVR ${ID_MCVR}; ID_MCVR="$(meta_get MCVR)"
