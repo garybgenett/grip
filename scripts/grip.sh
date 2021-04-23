@@ -503,22 +503,6 @@ function cd_encode {
 		fi
 	done
 
-	declare INDX="false"
-	for FILE in $(meta_get INDX); do
-		declare TRK="$(echo "${FILE}" | ${SED} "s|^([0-9]{2})/([0-9]{2}:[0-9]{2}:[0-9]{2})/([0-9]{2}:[0-9]{2}:[0-9]{2})$|\1|g")"
-		declare OLD="$(echo "${FILE}" | ${SED} "s|^([0-9]{2})/([0-9]{2}:[0-9]{2}:[0-9]{2})/([0-9]{2}:[0-9]{2}:[0-9]{2})$|\2|g")"
-		declare NEW="$(echo "${FILE}" | ${SED} "s|^([0-9]{2})/([0-9]{2}:[0-9]{2}:[0-9]{2})/([0-9]{2}:[0-9]{2}:[0-9]{2})$|\3|g")"
-		if [[ -n $(
-			${GREP} -A2 "^  TRACK ${TRK} AUDIO$" audio.cue |
-			${GREP} "^    INDEX 01 (${OLD})$"
-		) ]]; then
-			INDX="true"
-			run_cmd "${FUNCNAME}: audio" ${SED} -i "s|${OLD}|${NEW}|g" audio.cue
-		fi
-	done
-	if ${INDX}; then
-		${RSYNC_U} --checksum audio.cue _audio.cue || return 1
-	fi
 	if ! run_cmd "${FUNCNAME}: output" diff ${DIFF_OPTS} .audio.cue audio.cue; then
 		if ! run_cmd "${FUNCNAME}: output" diff ${DIFF_OPTS} _audio.cue audio.cue; then
 			return 1
@@ -1013,10 +997,14 @@ function cd_encode {
 				FILE="$(expr ${FILE} + 1)"
 				continue
 			fi
-			echo -en "CHAPTER${IDXN}=$(
+			declare MRK="$(
 				${GREP} -A2 "^  TRACK ${FILE} AUDIO$" audio.cue |
-				${SED} -n "s|^    INDEX 01 ([0-9]{2}):([0-9]{2}):([0-9]{2}).*$|00:\1:\2.000|gp"
-			)\n"									>>_metadata.tags
+				${SED} -n "s|^    INDEX 01 ([0-9]{2}:[0-9]{2}):[0-9]{2}$|\1|gp"
+			)"
+			for IDX in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})$"); do
+				MRK="$(echo "${IDX}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})$|\1|g")"
+			done
+			echo -en "CHAPTER${IDXN}=00:${MRK}.000\n"				>>_metadata.tags
 			echo -en "CHAPTER${IDXN}NAME="						>>_metadata.tags
 			echo -en "${FILE}${FLAC_NDIV//\\}"					>>_metadata.tags
 			echo -en "$(meta_get ${FILE}_T)${FLAC_TDIV//\\}$(meta_get ${FILE}_A)"	>>_metadata.tags
