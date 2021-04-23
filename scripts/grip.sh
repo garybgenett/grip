@@ -89,8 +89,9 @@ declare ID_COGS= ; declare ID_COGS_CHARS="m?[0-9]+"
 
 ########################################
 
-declare IMAGE_CMD="feh --scale-down --geometry 800x600"
 declare RSYNC_U="${RSYNC_U} --checksum"
+declare HTML_DUMP="w3m -dump"
+declare IMAGE_CMD="feh --scale-down --geometry 800x600"
 declare FLAC_OPTS="
 	--force \
 	--verify \
@@ -574,7 +575,11 @@ function cd_encode {
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}" || return 1
 		strip_file mb.${ID_CODE}.html
-		if [[ ! -s mb.${ID_CODE}.html ]]; then
+		if {
+			[[ ! -s mb.${ID_CODE}.html ]] ||
+			[[ -n $(${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found") ]];
+		}; then
+			${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found"
 			${LL} mb.${ID_CODE}.html*
 			return 1
 		fi
@@ -587,7 +592,11 @@ function cd_encode {
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}" || return 1
 		strip_file mb.${ID_DISC}.html
-		if [[ ! -s mb.${ID_DISC}.html ]]; then
+		if {
+			[[ ! -s mb.${ID_DISC}.html ]] ||
+			[[ -n $(${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "could not find the cd toc") ]];
+		}; then
+			${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "could not find the cd toc"
 			${LL} mb.${ID_DISC}.html*
 			return 1
 		fi
