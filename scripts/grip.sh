@@ -1372,9 +1372,9 @@ function flac_list {
 		)"
 		IFS=$'\n' FILES=($(echo -en "${FILE//|/\\n}")); unset IFS
 		#           5     + 25     + 20     + 30	= 80
-		printf "%-4.4s %-24.24s %-19.19s %-30.30s\n"	"${FILES[0]}" "${FILES[1]}" "${FILES[2]}" "${FILES[3]}"
+#>>>		printf "%-4.4s %-24.24s %-19.19s %-30.30s\n"	"${FILES[0]}" "${FILES[1]}" "${FILES[2]}" "${FILES[3]}"
 		#           5     + 45     + 30			= 80
-#>>>		printf "%-4.4s %-44.44s %-30.30s\n"		"${FILES[0]}" "${FILES[1]}" "${FILES[2]}"
+		printf "%-4.4s %-44.44s %-30.30s\n"		"${FILES[0]}" "${FILES[1]}" "${FILES[2]}"
 	done |
 		sort
 	return 0
