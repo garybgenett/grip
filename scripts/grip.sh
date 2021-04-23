@@ -1422,6 +1422,11 @@ function flac_rebuild {
 		done
 		return 0
 	fi
+	declare UNPK="false"
+	if [[ ${1} == -u ]]; then
+		UNPK="true"
+		shift
+	fi
 	declare AUTO="false"
 	if [[ ${1} == -a ]]; then
 		AUTO="true"
@@ -1434,6 +1439,7 @@ function flac_rebuild {
 		${_SELF} ${FILE}.dir/${FILE}										|| return 1
 		${RSYNC_U} --checksum .metadata/${FILE/%.flac}.metadata ${FILE}.dir/${FILE}.dir/.metadata		|| return 1
 		${RM} ${FILE}.dir/${FILE}.dir/_metadata*								|| return 1
+		${UNPK} && continue
 		if ${AUTO}; then
 			(cd ${FILE}.dir/${FILE}.dir && EDITOR="cat" DATE="$(cat .exported)" ${_SELF} -c)		|| return 1
 			diff ${DIFF_OPTS} ${FILE}.dir ${FILE}.dir/${FILE}.dir >${FILE}.diff 2>&1
