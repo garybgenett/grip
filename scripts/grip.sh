@@ -858,7 +858,7 @@ function cd_encode {
 		declare -a TTL
 		declare -a ART
 		FILE="1"
-		while (( ${FILE} <= ${TRCK} )); do
+		while (( ${FILE} <= ${TRCK/#0} )); do
 			TTL[${FILE}]="$(jq --raw-output '.media[].tracks[] | select(.position == '${FILE}') | .title'			id.${ID_MBID}.json)"
 			ART[${FILE}]="$(jq --raw-output '.media[].tracks[] | select(.position == '${FILE}') | ."artist-credit"[].name'	id.${ID_MBID}.json |
 				tr '\n' '^' |
@@ -880,7 +880,7 @@ function cd_encode {
 		echo -en "TRCK: ${TRCK}\n"				| tee -a .metadata
 		echo -en "INDX: ${INDX}\n"				| tee -a .metadata
 		FILE="1"
-		while (( ${FILE} <= ${TRCK} )); do
+		while (( ${FILE} <= ${TRCK/#0} )); do
 			if [[ ${FILE} == [0-9] ]]; then
 				FILE="0${FILE}"
 			fi
