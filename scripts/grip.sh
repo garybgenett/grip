@@ -591,10 +591,10 @@ function cd_encode {
 		[[ -n $(${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found") ]];
 	} || {
 		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; } ||
-		[[ -n $(${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "could not find the cd toc") ]];
+		[[ -n $(${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "cd toc not found") ]];
 	}; }; then
 		${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found"
-		${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "could not find the cd toc"
+		${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "cd toc not found"
 		${LL} mb.${ID_CODE}.html*
 		${LL} mb.${ID_DISC}.html*
 		return 1
