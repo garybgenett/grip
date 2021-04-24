@@ -91,6 +91,7 @@ declare ID_COGS= ; declare ID_COGS_CHARS="m?[0-9]+"
 
 declare RSYNC_U="${RSYNC_U} --checksum"
 declare HTML_DUMP="w3m -dump"
+declare JSON_CMD="jq --raw-output"
 declare IMAGE_CMD="feh --scale-down --geometry 800x600"
 declare FLAC_OPTS="
 	--force \
@@ -647,7 +648,7 @@ function cd_encode {
 		{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; };
 	} || {
 		{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; } ||
-		! jq --raw-output '' id.${ID_MBID}.json >/dev/null;
+		! ${JSON_CMD} '' id.${ID_MBID}.json >/dev/null;
 	}; }; then
 		${LL} id.${ID_MBID}.html*
 		${LL} id.${ID_MBID}.json*
@@ -714,15 +715,15 @@ function cd_encode {
 		strip_file image.${ID_MBID}.json
 		if {
 			[[ ! -s image.${ID_MBID}.json ]] ||
-			! jq --raw-output '' image.${ID_MBID}.json >/dev/null;
+			! ${JSON_CMD} '' image.${ID_MBID}.json >/dev/null;
 		}; then
 			${LL} image.${ID_MBID}.json*
 			return 1
 		fi
-		declare IMGS=($(jq --raw-output '.images[] | .id'						image.${ID_MBID}.json))
-#>>>		declare FRNT=($(jq --raw-output '.images[] | select(.types[]? | contains("Front")) | .id'	image.${ID_MBID}.json))
-#>>>		declare BACK=($(jq --raw-output '.images[] | select(.types[]? | contains("Back")) | .id'	image.${ID_MBID}.json))
-#>>>		declare MEDI=($(jq --raw-output '.images[] | select(.types[]? | contains("Medium")) | .id'	image.${ID_MBID}.json))
+		declare IMGS=($(${JSON_CMD} '.images[] | .id'						image.${ID_MBID}.json))
+#>>>		declare FRNT=($(${JSON_CMD} '.images[] | select(.types[]? | contains("Front")) | .id'	image.${ID_MBID}.json))
+#>>>		declare BACK=($(${JSON_CMD} '.images[] | select(.types[]? | contains("Back")) | .id'	image.${ID_MBID}.json))
+#>>>		declare MEDI=($(${JSON_CMD} '.images[] | select(.types[]? | contains("Medium")) | .id'	image.${ID_MBID}.json))
 		for FILE in ${IMGS[@]}; do
 			if [[ ! -s image.${ID_MBID}.${FILE}.jpg ]]; then
 				run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.${FILE}.jpg" http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg || return 1
@@ -845,9 +846,9 @@ function cd_encode {
 		[[ -z $(meta_get TRCK) ]];
 	}; then
 		run_cmd "${FUNCNAME}: metadata"
-		declare TITL="$(jq --raw-output '.title'			id.${ID_MBID}.json)"
-		declare YEAR="$(jq --raw-output '.date'				id.${ID_MBID}.json | ${SED} "s|^([0-9]{4}).*$|\1|g")"
-		declare TRCK="$(jq --raw-output '.media[].tracks[] | .position'	id.${ID_MBID}.json | sort -n | tail -n1)"
+		declare TITL="$(${JSON_CMD} '.title'				id.${ID_MBID}.json)"
+		declare YEAR="$(${JSON_CMD} '.date'				id.${ID_MBID}.json | ${SED} "s|^([0-9]{4}).*$|\1|g")"
+		declare TRCK="$(${JSON_CMD} '.media[].tracks[] | .position'	id.${ID_MBID}.json | sort -n | tail -n1)"
 		declare INDX="$(meta_get INDX)"
 		if [[ -z ${TRCK} ]]; then
 			TRCK="01"
@@ -859,8 +860,8 @@ function cd_encode {
 		declare -a ART
 		FILE="1"
 		while (( ${FILE} <= ${TRCK/#0} )); do
-			TTL[${FILE}]="$(jq --raw-output '.media[].tracks[] | select(.position == '${FILE}') | .title'			id.${ID_MBID}.json)"
-			ART[${FILE}]="$(jq --raw-output '.media[].tracks[] | select(.position == '${FILE}') | ."artist-credit"[].name'	id.${ID_MBID}.json |
+			TTL[${FILE}]="$(${JSON_CMD} '.media[].tracks[] | select(.position == '${FILE}') | .title'			id.${ID_MBID}.json)"
+			ART[${FILE}]="$(${JSON_CMD} '.media[].tracks[] | select(.position == '${FILE}') | ."artist-credit"[].name'	id.${ID_MBID}.json |
 				tr '\n' '^' |
 				${SED} "s|\^|${FLAC_ADIV}|g" |
 				${SED} "s|${FLAC_ADIV}$||g"
