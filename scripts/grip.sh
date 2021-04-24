@@ -898,6 +898,7 @@ function cd_encode {
 	if [[ ! -f _metadata ]]; then
 		run_cmd "${FUNCNAME}: metadata"
 		${EDITOR} .metadata
+		ID_NAME="$(meta_get NAME)"
 	fi
 	if {
 		declare FAIL="false"
