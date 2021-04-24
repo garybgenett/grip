@@ -517,8 +517,8 @@ function cd_encode {
 
 	ID_CODE="$(meta_get CODE)"
 	if {
-		[[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]] &&
-		[[ ${ID_CODE} != null ]];
+		[[ ${ID_CODE} != null ]] &&
+		[[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]];
 	}; then
 		run_cmd "${FUNCNAME}: code"
 		echo -en "BARCODE: $(which cdda2wav) -info-only -device ${SOURCE}\n"
@@ -530,13 +530,13 @@ function cd_encode {
 			echo -en "BARCODE: ${ID_CODE}\n"
 		fi
 		read -p "BARCODE> " ID_CODE
-		if {
-			[[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]] &&
-			[[ ${ID_CODE} != null ]];
-		}; then
-			return 1
-		fi
 		meta_set CODE ${ID_CODE}
+	fi
+	if {
+		[[ ${ID_CODE} != null ]] &&
+		[[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]];
+	}; then
+		return 1
 	fi
 	if [[ $(meta_get audio.cue CATALOG) != ${ID_CODE} ]]; then
 		run_cmd "${FUNCNAME}: code"
@@ -550,8 +550,8 @@ function cd_encode {
 
 	ID_DISC="$(meta_get DISC)"
 	if {
-		[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]] &&
-		[[ ${ID_DISC} != null ]];
+		[[ ${ID_DISC} != null ]] &&
+		[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]];
 	}; then
 		run_cmd "${FUNCNAME}: disc"
 		echo -en "CDINDEX: $(which cdda2wav) -info-only -device ${SOURCE}\n"
@@ -559,50 +559,63 @@ function cd_encode {
 			echo -en "CDINDEX: ${ID_DISC}\n"
 		fi
 		read -p "CDINDEX> " ID_DISC
-		if {
-			[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]] &&
-			[[ ${ID_DISC} != null ]];
-		}; then
-			return 1
-		fi
 		meta_set DISC ${ID_DISC}
+	fi
+	if {
+		[[ ${ID_DISC} != null ]] &&
+		[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]];
+	}; then
+		return 1
 	fi
 
 	ID_MBID="$(meta_get MBID)"
-	if { {
-		[[ ${ID_CODE} != null ]];
-	} && {
-		{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; };
-	}; }; then
+	if {
+		[[ ${ID_CODE} != null ]] &&
+		[[ ! -f mb.${ID_CODE}.html.null ]] &&
+		[[ ! -s mb.${ID_CODE}.html ]];
+	}; then
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}" || return 1
 		strip_file mb.${ID_CODE}.html
 	fi
-	if { {
-		[[ ${ID_DISC} != null ]];
-	} && {
-		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; };
-	}; }; then
+	if {
+		[[ ${ID_DISC} != null ]] &&
+		[[ ! -f mb.${ID_DISC}.html.null ]] &&
+		[[ ! -s mb.${ID_DISC}.html ]];
+	}; then
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}" || return 1
 		strip_file mb.${ID_DISC}.html
 	fi
-	if { {
-		{ [[ ! -s mb.${ID_CODE}.html ]] && [[ ! -f mb.${ID_CODE}.html.null ]]; } ||
-		[[ -n $(${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found") ]];
-	} || {
-		{ [[ ! -s mb.${ID_DISC}.html ]] && [[ ! -f mb.${ID_DISC}.html.null ]]; } ||
-		[[ -n $(${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "cd toc not found") ]];
-	}; }; then
+	declare FAIL="false"
+	if {
+		[[ ${ID_CODE} != null ]] &&
+		[[ ! -f mb.${ID_CODE}.html.null ]] && {
+			[[ ! -s mb.${ID_CODE}.html ]] ||
+			[[ -n $(${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found") ]];
+		};
+	}; then
 		${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found"
-		${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "cd toc not found"
 		${LL} mb.${ID_CODE}.html*
+		FAIL="true"
+	fi
+	if {
+		[[ ${ID_DISC} != null ]] &&
+		[[ ! -f mb.${ID_DISC}.html.null ]] && {
+			[[ ! -s mb.${ID_DISC}.html ]] ||
+			[[ -n $(${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "cd toc not found") ]];
+		};
+	}; then
+		${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "cd toc not found"
 		${LL} mb.${ID_DISC}.html*
+		FAIL="true"
+	fi
+	if ${FAIL}; then
 		return 1
 	fi
 	if {
-		[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]] &&
-		[[ ${ID_MBID} != null ]];
+		[[ ${ID_MBID} != null ]] &&
+		[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]];
 	}; then
 		run_cmd "${FUNCNAME}: mbid"
 		declare MBIDS=($(
@@ -618,47 +631,60 @@ function cd_encode {
 		fi
 		read -p "MBID> " ID_MBID
 		ID_MBID="${ID_MBID/#*\/}"
-		if {
-			[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]] &&
-			[[ ${ID_MBID} != null ]];
-		}; then
-			return 1
-		fi
 		meta_set MBID ${ID_MBID}
 	fi
-	if { {
-		[[ ${ID_MBID} != null ]];
-	} && {
-		{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; };
-	}; }; then
+	if {
+		[[ ${ID_MBID} != null ]] &&
+		[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]];
+	}; then
+		return 1
+	fi
+	if {
+		[[ ${ID_MBID} != null ]] &&
+		[[ ! -f id.${ID_MBID}.html.null ]] &&
+		[[ ! -s id.${ID_MBID}.html ]];
+	}; then
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}" || return 1
 		strip_file id.${ID_MBID}.html
 	fi
-	if { {
-		[[ ${ID_MBID} != null ]];
-	} && {
-		{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; };
-	}; }; then
+	if {
+		[[ ${ID_MBID} != null ]] &&
+		[[ ! -f id.${ID_MBID}.json.null ]] &&
+		[[ ! -s id.${ID_MBID}.json ]];
+	}; then
 		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json" || return 1
 		strip_file id.${ID_MBID}.json
 	fi
-	if { {
-		{ [[ ! -s id.${ID_MBID}.html ]] && [[ ! -f id.${ID_MBID}.html.null ]]; };
-	} || {
-		{ [[ ! -s id.${ID_MBID}.json ]] && [[ ! -f id.${ID_MBID}.json.null ]]; } ||
-		! ${JSON_CMD} '' id.${ID_MBID}.json >/dev/null;
-	}; }; then
+	declare FAIL="false"
+	if {
+		[[ ${ID_MBID} != null ]] &&
+		[[ ! -f id.${ID_MBID}.html.null ]] && {
+			[[ ! -s id.${ID_MBID}.html ]];
+		};
+	}; then
 		${LL} id.${ID_MBID}.html*
+		FAIL="true"
+	fi
+	if {
+		[[ ${ID_MBID} != null ]] &&
+		[[ ! -f id.${ID_MBID}.json.null ]] && {
+			[[ ! -s id.${ID_MBID}.json ]] ||
+			! ${JSON_CMD} '' id.${ID_MBID}.json >/dev/null;
+		};
+	}; then
 		${LL} id.${ID_MBID}.json*
+		FAIL="true"
+	fi
+	if ${FAIL}; then
 		return 1
 	fi
 
 	ID_COGS="$(meta_get COGS)"
 	if {
-		[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
-		[[ ${ID_COGS} != null ]];
+		[[ ${ID_COGS} != null ]] &&
+		[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]];
 	}; then
 		run_cmd "${FUNCNAME}: cogs"
 		if [[ ${ID_CODE} != null ]]; then
@@ -673,19 +699,19 @@ function cd_encode {
 		if [[ -n $(echo "${ID_COGS}" | ${GREP} "/master/") ]]; then	ID_COGS="m${ID_COGS/#*\/}"
 		else								ID_COGS="${ID_COGS/#*\/}"
 		fi
-		if {
-			[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]] &&
-			[[ ${ID_COGS} != null ]];
-		}; then
-			return 1
-		fi
 		meta_set COGS ${ID_COGS}
 	fi
-	if { {
-		[[ ${ID_COGS} != null ]];
-	} && {
-		{ [[ ! -s id.${ID_COGS}.html ]] && [[ ! -f id.${ID_COGS}.html.null ]]; };
-	}; }; then
+	if {
+		[[ ${ID_COGS} != null ]] &&
+		[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]];
+	}; then
+		return 1
+	fi
+	if {
+		[[ ${ID_COGS} != null ]] &&
+		[[ ! -f id.${ID_COGS}.html.null ]] &&
+		[[ ! -s id.${ID_COGS}.html ]];
+	}; then
 		run_cmd "${FUNCNAME}: cogs"
 		if [[ ${ID_COGS//[0-9]} == m ]]; then	run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_COGS}.html" "https://www.discogs.com/master/${ID_COGS/#m}" || return 1
 		else					run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_COGS}.html" "https://www.discogs.com/release/${ID_COGS}" || return 1
@@ -693,7 +719,10 @@ function cd_encode {
 		strip_file id.${ID_COGS}.html
 	fi
 	if {
-		{ [[ ! -s id.${ID_COGS}.html ]] && [[ ! -f id.${ID_COGS}.html.null ]]; };
+		[[ ${ID_COGS} != null ]] &&
+		[[ ! -f id.${ID_COGS}.html.null ]] && {
+			[[ ! -s id.${ID_COGS}.html ]];
+		};
 	}; then
 		${LL} id.${ID_COGS}.html*
 		return 1
@@ -702,12 +731,13 @@ function cd_encode {
 	ID_FCVR="$(meta_get FCVR)"
 	ID_BCVR="$(meta_get BCVR)"
 	ID_MCVR="$(meta_get MCVR)"
-	if { {
-		[[ ${ID_MBID} != null ]];
-	} && {
-		{ [[ -z $(${LS} _image.${ID_MBID}.[0-9-]* 2>/dev/null) ]] ||
-		[[ ! -s image.${ID_MBID}.json ]]; } && [[ ! -f image.${ID_MBID}.json.null ]];
-	}; }; then
+	if {
+		[[ ${ID_MBID} != null ]] &&
+		[[ ! -f image.${ID_MBID}.json.null ]] && {
+			[[ ! -s image.${ID_MBID}.json ]] ||
+			[[ -z $(${LS} _image.${ID_MBID}.[0-9-]* 2>/dev/null) ]];
+		};
+	}; then
 		run_cmd "${FUNCNAME}: images"
 		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.json"		http://coverartarchive.org/release/${ID_MBID}		|| return 1
 #>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.front.jpg"	http://coverartarchive.org/release/${ID_MBID}/front	|| return 1
@@ -735,18 +765,21 @@ function cd_encode {
 		done
 		touch _image.${ID_MBID}.${DATE}
 	fi
-	if { {
-		[[ ${ID_COGS} != null ]];
-	} && {
-		{ [[ -z $(${LS} _image.${ID_COGS}.[0-9-]* 2>/dev/null) ]] ||
-		[[ ! -s image.${ID_COGS}.html ]]; } && [[ ! -f image.${ID_COGS}.html.null ]];
-	}; }; then
+	if {
+		[[ ${ID_COGS} != null ]] &&
+		[[ ! -f image.${ID_COGS}.html.null ]] && {
+			[[ ! -s image.${ID_COGS}.html ]] ||
+			[[ -z $(${LS} _image.${ID_COGS}.[0-9-]* 2>/dev/null) ]];
+		};
+	}; then
 		run_cmd "${FUNCNAME}: images"
 		if [[ ${ID_COGS//[0-9]} == m ]]; then	run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_COGS}.html" "https://www.discogs.com/master/${ID_COGS/#m}/images" || return 1
 		else					run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_COGS}.html" "https://www.discogs.com/release/${ID_COGS}/images" || return 1
 		fi
 		strip_file image.${ID_COGS}.html
-		if [[ ! -s image.${ID_COGS}.html ]]; then
+		if {
+			[[ ! -s image.${ID_COGS}.html ]];
+		}; then
 			${LL} image.${ID_COGS}.html*
 			return 1
 		fi
