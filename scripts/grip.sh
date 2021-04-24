@@ -539,12 +539,16 @@ function cd_encode {
 	}; then
 		return 1
 	fi
-	if [[ $(meta_get audio.cue CATALOG) != ${ID_CODE} ]]; then
+	declare BARCODE="${ID_CODE}"
+	if [[ ${ID_CODE} == null ]]; then
+		BARCODE="0000000000000"
+	fi
+	if [[ $(meta_get audio.cue CATALOG) != ${BARCODE} ]]; then
 		run_cmd "${FUNCNAME}: code"
 		if [[ -z $(${GREP} "^CATALOG" audio.cue) ]]; then
-			${SED} -i "s|^(FILE .+)$|CATALOG ${ID_CODE}\n\1|g" audio.cue
+			${SED} -i "s|^(FILE .+)$|CATALOG ${BARCODE}\n\1|g" audio.cue
 		else
-			meta_set audio.cue CATALOG ${ID_CODE}
+			meta_set audio.cue CATALOG ${BARCODE}
 		fi
 		${RSYNC_U} audio.cue _audio.cue || return 1
 	fi
