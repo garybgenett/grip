@@ -1202,15 +1202,6 @@ function flac_unpack {
 		ADDARG="${1}"
 		shift
 	fi
-	declare TGZ_LST="$(metaflac --list --block-type="PICTURE" --block-number="${FLAC_BLCK}" ${UNPACK} 2>/dev/null | ${SED} -n "s|^ +description: ||gp")"
-	declare TGZ_OUT="$(metaflac --block-number="${FLAC_BLCK}" --export-picture-to=- ${UNPACK} 2>/dev/null | ${FLAC_HASH} | ${GREP} -o "^${FLAC_HASH_CHARS}")"
-	if {
-		[[ ${TGZ_LST} != ${TGZ_OUT} ]];
-	}; then
-		echo -en "${TGZ_LST}\n"
-		echo -en "${TGZ_OUT}\n"
-		return 1
-	fi
 	run_cmd "${FUNCNAME}" metaflac --list			${UNPACK} | ${GREP} -A4 "^METADATA" | ${GREP} -v "^--$" #>>> || return 1
 	run_cmd "${FUNCNAME}" metaflac --export-tags-to=-	${UNPACK} || return 1
 	if [[ ${ADDARG} == -l ]]; then
@@ -1231,6 +1222,15 @@ function flac_unpack {
 		${RSYNC_U} ${UNPACK}.dir/.metadata ${UNPACK/%.flac}.metadata
 		run_cmd "${FUNCNAME}" cat ${UNPACK/%.flac}.metadata
 		return 0
+	fi
+	declare TGZ_LST="$(metaflac --list --block-type="PICTURE" --block-number="${FLAC_BLCK}" ${UNPACK} 2>/dev/null | ${SED} -n "s|^ +description: ||gp")"
+	declare TGZ_OUT="$(metaflac --block-number="${FLAC_BLCK}" --export-picture-to=- ${UNPACK} 2>/dev/null | ${FLAC_HASH} | ${GREP} -o "^${FLAC_HASH_CHARS}")"
+	if {
+		[[ ${TGZ_LST} != ${TGZ_OUT} ]];
+	}; then
+		echo -en "${TGZ_LST}\n"
+		echo -en "${TGZ_OUT}\n"
+		return 1
 	fi
 	if [[ ! -d ${UNPACK}.dir ]]; then
 		${MKDIR} ${UNPACK}.dir
