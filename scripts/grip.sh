@@ -1214,8 +1214,8 @@ function flac_unpack {
 			--export-picture-to=- \
 			${UNPACK} \
 			| ${TAR_CMD} -x -C ${UNPACK}.dir -f - .metadata
-		${RSYNC_U} ${UNPACK}.dir/.metadata ${UNPACK}.metadata
-		run_cmd "${FUNCNAME}" cat ${UNPACK}.metadata
+		${RSYNC_U} ${UNPACK}.dir/.metadata ${UNPACK/%.flac}.metadata
+		run_cmd "${FUNCNAME}" cat ${UNPACK/%.flac}.metadata
 		return 0
 	fi
 	if [[ ! -d ${UNPACK}.dir ]]; then
@@ -1445,8 +1445,8 @@ function flac_metadata {
 		${MKDIR} .metadata
 		for FILE in *.flac; do
 			${_SELF} ${FILE} -x || return 1
-			${RSYNC_U} ${FILE}.metadata .metadata/${FILE/%.flac}.metadata || return 1
-			${RM} ${FILE}.dir ${FILE}.metadata
+			${RSYNC_U} ${FILE/%.flac}.metadata .metadata/${FILE/%.flac}.metadata || return 1
+			${RM} ${FILE}.dir ${FILE/%.flac}.metadata
 		done
 		${LL} .metadata
 	fi
