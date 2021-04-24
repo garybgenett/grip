@@ -93,6 +93,7 @@ declare RSYNC_U="${RSYNC_U} --checksum"
 declare HTML_DUMP="w3m -dump"
 declare JSON_CMD="jq --raw-output"
 declare IMAGE_CMD="feh --scale-down --geometry 800x600"
+declare TAR_CMD="tar --xz -vv"
 declare FLAC_OPTS="
 	--force \
 	--verify \
@@ -1117,7 +1118,7 @@ function cd_encode {
 				-e " ${ID_NAME//+/\\+}" \
 			| tee _checksum
 			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
-		run_cmd "${FUNCNAME}: archive" tar --xz -vv -c \
+		run_cmd "${FUNCNAME}: archive" ${TAR_CMD} -c \
 			--exclude="audio.*" \
 			--exclude="audio_*" \
 			--exclude="${ID_NAME}*" \
@@ -1171,7 +1172,7 @@ function cd_encode {
 		--block-number="${FLAC_BLCK}" \
 		--export-picture-to=- \
 		${ID_NAME}.flac \
-		| tar --xz -vv -t -f -
+		| ${TAR_CMD} -t -f -
 #>>>	run_cmd "${FUNCNAME}" ${LL}
 	run_cmd "${FUNCNAME}" ${LL} $(find ./ -maxdepth 1 -empty | ${SED} "s|^\./||g" | sort)
 	run_cmd "${FUNCNAME}" ${DU} -cms ${ID_NAME}*
@@ -1203,7 +1204,7 @@ function flac_unpack {
 			--block-number="${FLAC_BLCK}" \
 			--export-picture-to=- \
 			${UNPACK} \
-			| tar --xz -vv -t -f -
+			| ${TAR_CMD} -t -f -
 		return 0
 	fi
 	if [[ ${ADDARG} == -x ]]; then
@@ -1212,7 +1213,7 @@ function flac_unpack {
 			--block-number="${FLAC_BLCK}" \
 			--export-picture-to=- \
 			${UNPACK} \
-			| (cd ${UNPACK}.dir; tar --xz -vv -x .metadata)
+			| ${TAR_CMD} -x -C ${UNPACK}.dir -f - .metadata
 		${RSYNC_U} ${UNPACK}.dir/.metadata ${UNPACK}.metadata
 		run_cmd "${FUNCNAME}" cat ${UNPACK}.metadata
 		return 0
@@ -1223,8 +1224,7 @@ function flac_unpack {
 			--block-number="${FLAC_BLCK}" \
 			--export-picture-to=- \
 			${UNPACK} \
-			| tar --xz -vv -x -C ${UNPACK}.dir -f - \
-			|| return 1
+			| ${TAR_CMD} -x -C ${UNPACK}.dir -f -
 		function validate_file {
 			declare TAG="${1}" && shift
 			declare EXP="${1}" && shift
