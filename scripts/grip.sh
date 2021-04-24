@@ -412,10 +412,10 @@ function cd_encode {
 	fi
 
 	if {
-		[[ ! -s .exported	]] ||
-		[[ ! -s .audio.log	]] ||
-		[[ ! -s .audio.cue	]] ||
-		[[ ! -s audio.cue	]] ||
+		[[ ! -s .exported	]] &&
+		[[ ! -s .audio.log	]] &&
+		[[ ! -s .audio.cue	]] &&
+		[[ ! -s audio.cue	]] &&
 		[[ ! -s audio.wav	]];
 	}; then
 		run_cmd "${FUNCNAME}: audio"
@@ -499,6 +499,16 @@ function cd_encode {
 			${RSYNC_U} audio.cue _audio.cue	|| return 1
 		fi
 		echo "${DATE}" >.exported
+	fi
+	if {
+		[[ ! -s .exported	]] ||
+		[[ ! -s .audio.log	]] ||
+		[[ ! -s .audio.cue	]] ||
+		[[ ! -s audio.cue	]] ||
+		[[ ! -s audio.wav	]];
+	}; then
+		${FUNCNAME} -s
+		return 1
 	fi
 
 	if ! run_cmd "${FUNCNAME}" diff ${DIFF_OPTS} .audio.cue audio.cue; then
