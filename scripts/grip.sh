@@ -1182,6 +1182,7 @@ function cd_encode {
 	fi
 
 	run_cmd "${FUNCNAME}: complete"
+	run_cmd "${FUNCNAME}" ${_SELF} ${ID_NAME}.flac -x
 	run_cmd "${FUNCNAME}" metaflac \
 		--block-number="${FLAC_BLCK}" \
 		--export-picture-to=- \
