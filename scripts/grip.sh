@@ -226,7 +226,7 @@ function strip_file {
 function go_fetch {
 	declare LCL="${1}" && shift
 	declare RMT="${1}" && shift
-	declare SLP="$(((${RANDOM}%10)+3))"
+	declare SLP="$(((${RANDOM}%3)+3))"
 	declare AGT="${SCRIPT}/${DATE} (${USER}@${HOSTNAME}.net)"
 	run_cmd "${FUNCNAME}" ${WGET_C}		--user-agent="${AGT}" --output-document="${LCL}" "${RMT}"			||
 	run_cmd "${FUNCNAME}" $(which curl)	--user-agent "${AGT}" --verbose --remote-time --output "${LCL}" "${RMT}"	|| return 1
