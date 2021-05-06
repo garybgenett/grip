@@ -973,6 +973,7 @@ function cd_encode {
 			fi
 			FILE="$(expr ${FILE} + 1)"
 		done
+		if ${GREP} "^NAME:?.*[ .]the_.+$" .metadata; then FAIL="true"; fi
 		${FAIL}
 	}; then
 		return 1
