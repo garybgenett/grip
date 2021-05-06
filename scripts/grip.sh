@@ -101,7 +101,8 @@ declare FLAC_OPTS="
 	\
 	--best \
 	--no-padding \
-	--no-preserve-modtime
+	--no-preserve-modtime \
+	--no-keep-foreign-metadata \
 "
 export XZ_OPT="]
 	--verbose \
