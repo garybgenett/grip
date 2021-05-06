@@ -635,7 +635,7 @@ function cd_encode {
 	}; then
 		run_cmd "${FUNCNAME}: mbid"
 		declare MBIDS=($(
-			${SED} "s|(<a href=\"/release/${ID_MBID_CHARS}\")|\n\1|g" mb.${ID_CODE}.html mb.${ID_DISC}.html |
+			${SED} "s|(<a href=\"/release/${ID_MBID_CHARS}\")|\n\1|g" mb.${ID_CODE}.html mb.${ID_DISC}.html 2>/dev/null |
 			${SED} -n "s|^.+/release/(${ID_MBID_CHARS}).+>([A-Z]{2})<.+$|\2:\1|gp" |
 			sort -u
 		))
