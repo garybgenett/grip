@@ -469,7 +469,7 @@ function cd_encode {
 			2>&1 | tee -a .audio.log
 			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
 #>>> wav/cue (cdda) <
-#>>> wav/cue (cdda/shntool) >
+#>>> wav (cdda/shntool) >
 #		run_cmd "${FUNCNAME}: audio" $(which cdda2wav) \
 #			-verbose-level all \
 #			-speed ${CD_SPEED_RESCUE} \
@@ -481,7 +481,12 @@ function cd_encode {
 #			-device ${SOURCE} \
 #			2>&1 | tee -a .audio.log
 #			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
-#>>> wav/cue (cdda/shntool) <
+#>>> wav (cdda/shntool) <
+#>>> wav (cdparanoia/shntool) >
+#		run_cmd "${FUNCNAME}: audio" cd_export --stderr-progress \
+#			2>&1 | tee -a .audio.log
+#			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
+#>>> wav (cdparanoia/shntool) <
 #>>> wav (shntool) >
 #		run_cmd "${FUNCNAME}: audio" $(which shnjoin) \
 #			-D -O always -i wav -o wav -e -a audio audio_*.wav \
