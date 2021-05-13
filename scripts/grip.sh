@@ -509,7 +509,6 @@ function cd_encode {
 			if ${GREP} -v " 0 rderr, 0 skip, 0 atom, 0 edge, 0 drop, 0 dup, 0 drift, 0 0 c2$"; then
 				return 1
 			fi
-		fi
 	fi
 	if {
 		[[ ! -s .exported	]] ||
