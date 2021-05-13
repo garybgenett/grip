@@ -533,8 +533,8 @@ function cd_encode {
 	for FILE in $(meta_get NULL); do
 		if [[ ! -f ${FILE}.null ]]; then
 			touch ${FILE}.null
-			${RM} ${FILE} >/dev/null 2>&1
 		fi
+		${RM} ${FILE} >/dev/null 2>&1
 	done
 
 	ID_CODE="$(meta_get CODE)"
