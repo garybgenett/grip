@@ -596,6 +596,7 @@ function cd_encode {
 
 	ID_MBID="$(meta_get MBID)"
 	if {
+		[[ ${ID_MBID} != null ]] &&
 		[[ ${ID_CODE} != null ]] &&
 		[[ ! -f mb.${ID_CODE}.html.null ]] &&
 		[[ ! -s mb.${ID_CODE}.html ]];
@@ -605,6 +606,7 @@ function cd_encode {
 		strip_file mb.${ID_CODE}.html
 	fi
 	if {
+		[[ ${ID_MBID} != null ]] &&
 		[[ ${ID_DISC} != null ]] &&
 		[[ ! -f mb.${ID_DISC}.html.null ]] &&
 		[[ ! -s mb.${ID_DISC}.html ]];
@@ -615,6 +617,7 @@ function cd_encode {
 	fi
 	declare FAIL="false"
 	if {
+		[[ ${ID_MBID} != null ]] &&
 		[[ ${ID_CODE} != null ]] &&
 		[[ ! -f mb.${ID_CODE}.html.null ]] && {
 			[[ ! -s mb.${ID_CODE}.html ]] ||
@@ -626,6 +629,7 @@ function cd_encode {
 		FAIL="true"
 	fi
 	if {
+		[[ ${ID_MBID} != null ]] &&
 		[[ ${ID_DISC} != null ]] &&
 		[[ ! -f mb.${ID_DISC}.html.null ]] && {
 			[[ ! -s mb.${ID_DISC}.html ]] ||
