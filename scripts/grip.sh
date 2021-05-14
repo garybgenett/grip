@@ -41,7 +41,8 @@ declare CROPTST="30"
 declare CDDB_SERVER="gnudb.org"
 declare CDDB="-1"
 
-declare PARANOIA_OPTS="proof"
+declare PARANOIA_RETRIES="10"
+declare PARANOIA_OPTS="proof,c2check,retries=${PARANOIA_RETRIES}"
 declare CD_SPEED="6"
 declare CD_SPEED_RESCUE="1"
 
@@ -295,7 +296,7 @@ function mp_encode {
 function cd_export {
 	# https://linuxconfig.org/how-to-rip-an-audio-cd-from-the-command-line-using-cdparanoia
 	#	https://www.cyberciti.biz/faq/linux-ripping-and-encoding-audio-files
-	run_cmd "${FUNCNAME}" $(which cdparanoia) --verbose --output-wav --batch --abort-on-skip --never-skip=10 "${@}" --force-cdrom-device ${SOURCE} || return 1
+	run_cmd "${FUNCNAME}" $(which cdparanoia) --verbose --output-wav --batch --abort-on-skip --never-skip=${PARANOIA_RETRIES} "${@}" --force-cdrom-device ${SOURCE} || return 1
 	return 0
 }
 
