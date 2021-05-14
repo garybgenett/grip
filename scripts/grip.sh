@@ -79,6 +79,9 @@ FILEALL_CHARS+="$(echo "${ID_TITL_CHARS}" | ${SED} -e "s|^\[-?||g" -e "s|-?\]\+?
 FILEALL_CHARS+="$(echo "${ID_ARTS_CHARS}" | ${SED} -e "s|^\[-?||g" -e "s|-?\]\+?$||g")"
 FILEALL_CHARS+="]"
 
+declare NULL_IMAGE_COLOR="transparent"
+declare BACKGROUND_COLOR="black"
+
 declare ID_FCVR=
 declare ID_BCVR=
 declare ID_MCVR=
@@ -847,6 +850,15 @@ function cd_encode {
 		{ [[ ! -s _image.media.jpg	]] || [[ $(basename $(realpath _image.media.jpg))	!= $(basename $(realpath ${ID_MCVR})) ]]; };
 	}; then
 		run_cmd "${FUNCNAME}: images"
+		if [[ ${ID_FCVR} == null ]]; then
+			if ! convert -verbose -size 600x600 canvas:${NULL_IMAGE_COLOR} png:image.null.jpg; then
+				return 1
+			fi
+			for FILE in FCVR BCVR MCVR; do
+				meta_set ${FILE} null
+				eval ID_${FILE}="$(meta_get ${FILE})"
+			done
+		fi
 		function image_select {
 			declare IMG="${1}" && shift
 			declare CVR="${1}" && shift
@@ -858,7 +870,9 @@ function cd_encode {
 			if [[ -n ${VAL} ]]; then
 				echo -en "IMAGE (${IMG}): ${VAL}\n"
 			fi
-			if [[ -s ${VAL} ]]; then
+			if [[ ${VAL} == null ]]; then
+				${LN} image.${VAL}.jpg _image.${IMG}.jpg
+			elif [[ -s ${VAL} ]]; then
 				if [[ $(basename $(realpath _image.${IMG}.jpg)) != ${VAL} ]]; then
 					${LN} ${VAL} _image.${IMG}.jpg
 				fi
@@ -893,8 +907,14 @@ function cd_encode {
 			${LL} _image.*
 			return 1
 		fi
-		if ! convert -verbose -background black -resize 32x32 -extent 32x32 _image.front.jpg _image.icon.png; then
-			return 1
+		if [[ ${ID_FCVR} == null ]]; then
+			if ! convert -verbose -size 32x32 canvas:${NULL_IMAGE_COLOR} png:_image.icon.png; then
+				return 1
+			fi
+		else
+			if ! convert -verbose -background ${BACKGROUND_COLOR} -resize 32x32 -extent 32x32 _image.front.jpg _image.icon.png; then
+				return 1
+			fi
 		fi
 		sleep 1;
 		${IMAGE_CMD} _image.*.{png,jpg} 2>/dev/null || return 1
