@@ -1231,7 +1231,8 @@ function flac_unpack {
 			--block-number="${FLAC_BLCK}" \
 			--export-picture-to=- \
 			${UNPACK} \
-			| ${TAR_CMD} -x -C ${UNPACK}.dir -f - .metadata
+			| ${TAR_CMD} -x -C ${UNPACK}.dir -f - .audio.log .metadata
+		${RSYNC_U} ${UNPACK}.dir/.audio.log ${UNPACK/%.flac}.log
 		${RSYNC_U} ${UNPACK}.dir/.metadata ${UNPACK/%.flac}.metadata
 		run_cmd "${FUNCNAME}" cat ${UNPACK/%.flac}.metadata
 		return 0
@@ -1469,12 +1470,15 @@ function flac_metadata {
 		done |
 			${PAGER} +/export-tags-to
 	else
+		${MKDIR} .logs
 		${MKDIR} .metadata
 		for FILE in *.flac; do
 			${_SELF} ${FILE} -x || return 1
+			${RSYNC_U} ${FILE/%.flac}.log .logs/${FILE/%.flac}.log || return 1
 			${RSYNC_U} ${FILE/%.flac}.metadata .metadata/${FILE/%.flac}.metadata || return 1
-			${RM} ${FILE}.dir ${FILE/%.flac}.metadata
+			${RM} ${FILE}.dir ${FILE/%.flac}.{log,metadata}
 		done
+		${LL} .logs
 		${LL} .metadata
 	fi
 	return 0
