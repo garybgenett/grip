@@ -624,9 +624,11 @@ function cd_encode {
 		[[ ${ID_CODE} != null ]] &&
 		[[ ! -f mb.${ID_CODE}.html.null ]] && {
 			[[ ! -s mb.${ID_CODE}.html ]] ||
+			[[ -n $(${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "site is down") ]] ||
 			[[ -n $(${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found") ]];
 		};
 	}; then
+		${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "site is down"
 		${HTML_DUMP} mb.${ID_CODE}.html 2>&1 | ${GREP} -i "no results found"
 		${LL} mb.${ID_CODE}.html*
 		FAIL="true"
@@ -636,9 +638,11 @@ function cd_encode {
 		[[ ${ID_DISC} != null ]] &&
 		[[ ! -f mb.${ID_DISC}.html.null ]] && {
 			[[ ! -s mb.${ID_DISC}.html ]] ||
+			[[ -n $(${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "site is down") ]] ||
 			[[ -n $(${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "cd toc not found") ]];
 		};
 	}; then
+		${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "site is down"
 		${HTML_DUMP} mb.${ID_DISC}.html 2>&1 | ${GREP} -i "cd toc not found"
 		${LL} mb.${ID_DISC}.html*
 		FAIL="true"
