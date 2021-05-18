@@ -1012,7 +1012,7 @@ function cd_encode {
 			FILE="$(expr ${FILE} + 1)"
 		done
 		if [[ $(meta_get NAME | ${GREP} -o "[0-9]{4}$") != $(meta_get YEAR) ]]; then ${GREP} -e "^NAME:?" -e "^YEAR:?" .metadata; FAIL="true"; fi
-		if ${GREP} "^NAME:?.*[ .]the_.+$" .metadata; then FAIL="true"; fi
+		if ${GREP} "^NAME:?.*[ .]the_.+$" .metadata | ${GREP} "[ .]the_"; then FAIL="true"; fi
 		${FAIL}
 	}; then
 		return 1
