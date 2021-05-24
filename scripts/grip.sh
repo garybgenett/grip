@@ -1492,6 +1492,43 @@ function flac_list {
 
 ########################################
 
+function flac_hacks {
+	if [[ ${1} == -l ]]; then
+		shift
+		${_SELF} "${@}" -l 2>&1 |
+			${GREP} -A4 "^  TRACK [0-9]{2} AUDIO$" |
+			tr -d '\n' |
+			${SED} "s|(  TRACK )|\n\1|g" |
+			${SED} -n "s|^  TRACK ([0-9]{2}).+INDEX 01 ([0-9]{2}:[0-9]{2}):[0-9]{2}$|\1/\2|gp"
+		echo -en "\n"
+		return 0
+	elif [[ ${1} == -i ]]; then
+		shift
+		for FILE in "${@}"; do
+			echo "# wget -O ${FILE/%\.jpg/-500.jpg} https://coverartarchive.org/release/$(echo "${FILE/#image.}" | ${SED} -e "s|^(${ID_MBID_CHARS})\.|\1/|g" -e "s|\.jpg|-500.jpg|g")"
+		done | sort -u >>.metadata
+		for FILE in "${@}"; do
+			echo "# ln ${FILE/%\.jpg/-500.jpg} ${FILE}"
+		done | sort -u >>.metadata
+		${EDITOR} .metadata
+		${SED} -n "s|^# wget||gp"	.metadata | while read -r FILE; do ${WGET_C}	${FILE}; done
+		${SED} -n "s|^# ln||gp"		.metadata | while read -r FILE; do ${LN}	${FILE}; done
+		FAIL="false"
+		for FILE in "${@}"; do
+			if ${GREP} "^[A-Z]CVR:?.*${FILE}$" .metadata; then
+				FAIL="true"
+			fi
+		done
+		if ${FAIL}; then
+			return 1
+		fi
+		return 0
+	fi
+	return 0
+}
+
+########################################
+
 function flac_metadata {
 	if [[ ${1} == -l ]]; then
 		shift
@@ -1568,6 +1605,7 @@ function flac_rebuild {
   if { [[ -s ${SOURCE} ]] && [[ -n $(file ${SOURCE} | ${GREP} "FLAC") ]]; }; then	flac_unpack	"${SOURCE}" "${@}" || exit 1
 elif { [[ -s ${SOURCE} ]] && [[ ${SOURCE/%.m3u} != ${SOURCE} ]]; }; then		flac_playlist	"${SOURCE}" "${@}" || exit 1
 elif [[ ${RTYPE} == -l ]]; then		flac_list	"${@}" || exit 1
+elif [[ ${RTYPE} == -k ]]; then		flac_hacks	"${@}" || exit 1
 elif [[ ${RTYPE} == -y ]]; then		flac_metadata	"${@}" || exit 1
 elif [[ ${RTYPE} == -r ]]; then		flac_rebuild	"${@}" || exit 1
 elif [[ ${RTYPE} == -d ]]; then		dvd_rescue	"${@}" || exit 1
