@@ -116,6 +116,7 @@ export XZ_OPT="]
 
 ########################################
 
+declare FAIL="false"
 declare FILE=
 
 ################################################################################
@@ -510,9 +511,9 @@ function cd_encode {
 		fi
 		echo "${DATE}" >.exported
 		${GREP} " [0-9]+ rderr," .audio.log |
-			if ${GREP} -v "^.100%  0 rderr, 0 skip, 0 atom, 0 edge, 0 drop, 0 dup, 0 drift, 0 0 c2$"; then
-				return 1
-			fi
+			${GREP} -v "^.100%  0 rderr, 0 skip, 0 atom, 0 edge, 0 drop, 0 dup, 0 drift, 0 0 c2$" |
+			${GREP} "^.+$"
+			[[ ${PIPESTATUS[2]} != 1 ]] && return 1
 	fi
 	if {
 		[[ ! -s .exported	]] ||
