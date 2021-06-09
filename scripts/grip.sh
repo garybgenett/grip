@@ -779,9 +779,9 @@ function cd_encode {
 		};
 	}; then
 		run_cmd "${FUNCNAME}: images"
-		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.json"		http://coverartarchive.org/release/${ID_MBID}		|| return 1
-#>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.front.jpg"	http://coverartarchive.org/release/${ID_MBID}/front	|| return 1
-#>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.back.jpg"	http://coverartarchive.org/release/${ID_MBID}/back	|| return 1
+		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.json"		"http://coverartarchive.org/release/${ID_MBID}"		|| return 1
+#>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.front.jpg"	"http://coverartarchive.org/release/${ID_MBID}/front"	|| return 1
+#>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.back.jpg"	"http://coverartarchive.org/release/${ID_MBID}/back"	|| return 1
 		strip_file image.${ID_MBID}.json
 		if {
 			[[ ! -s image.${ID_MBID}.json ]] ||
@@ -796,7 +796,7 @@ function cd_encode {
 #>>>		declare MEDI=($(${JSON_CMD} '.images[] | select(.types[]? | contains("Medium")) | .id'	image.${ID_MBID}.json))
 		for FILE in ${IMGS[@]}; do
 			if [[ ! -s image.${ID_MBID}.${FILE}.jpg ]]; then
-				run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.${FILE}.jpg" http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg || return 1
+				run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.${FILE}.jpg" "http://coverartarchive.org/release/${ID_MBID}/${FILE}.jpg" || return 1
 			fi
 			if [[ ! -s image.${ID_MBID}.${FILE}.jpg ]]; then
 				${LL} image.${ID_MBID}.${FILE}.jpg*
