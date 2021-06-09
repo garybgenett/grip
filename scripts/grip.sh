@@ -96,7 +96,7 @@ declare ID_COGS= ; declare ID_COGS_CHARS="m?[0-9]+"
 declare RSYNC_U="${RSYNC_U} --checksum"
 declare HTML_DUMP="w3m -dump"
 declare JSON_CMD="jq --raw-output"
-declare IMAGE_CMD="feh --scale-down --geometry 800x600"
+declare IMAGE_CMD="feh --scale-down --geometry 800x600 --sort name --preload --thumbnails --thumb-redraw 0"
 declare TAR_CMD="tar --xz -vv"
 declare FLAC_OPTS="
 	--force \
