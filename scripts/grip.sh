@@ -852,9 +852,9 @@ function cd_encode {
 	fi
 	if {
 		[[ ! -s _image.icon.png		]] ||
-		{ [[ ! -s _image.front.jpg	]] || [[ $(basename $(realpath _image.front.jpg))	!= $(basename $(realpath ${ID_FCVR})) ]]; } ||
-		{ [[ ! -s _image.back.jpg	]] || [[ $(basename $(realpath _image.back.jpg))	!= $(basename $(realpath ${ID_BCVR})) ]]; } ||
-		{ [[ ! -s _image.media.jpg	]] || [[ $(basename $(realpath _image.media.jpg))	!= $(basename $(realpath ${ID_MCVR})) ]]; };
+		{ { [[ ! -s _image.front.jpg	]] || [[ $(basename $(realpath _image.front.jpg))	!= $(basename $(realpath ${ID_FCVR})) ]]; } && [[ ${ID_FCVR} != "null" ]]; } ||
+		{ { [[ ! -s _image.back.jpg	]] || [[ $(basename $(realpath _image.back.jpg))	!= $(basename $(realpath ${ID_BCVR})) ]]; } && [[ ${ID_FCVR} != "null" ]]; } ||
+		{ { [[ ! -s _image.media.jpg	]] || [[ $(basename $(realpath _image.media.jpg))	!= $(basename $(realpath ${ID_MCVR})) ]]; } && [[ ${ID_FCVR} != "null" ]]; };
 	}; then
 		run_cmd "${FUNCNAME}: images"
 		if [[ ${ID_FCVR} == null ]]; then
