@@ -376,6 +376,7 @@ function cd_encode {
 		echo "BCVR:"	>>.metadata
 		echo "MCVR:"	>>.metadata
 		echo "NULL:"	>>.metadata
+		echo "SIZE:"	>>.metadata
 		printf "%-40.40s" "### meta $(divider 2>&1)" >>.metadata
 		echo ""		>>.metadata
 		echo "CODE:"	>>.metadata
@@ -850,6 +851,17 @@ function cd_encode {
 		done
 		touch _image.${ID_COGS}.${DATE}
 	fi
+	for FILE in $(meta_get SIZE); do
+		if {
+			[[ ! -s ${FILE/%\.jpg/-500.jpg} ]] ||
+			[[ ! -L ${FILE} ]];
+		}; then
+			run_cmd "${FUNCNAME}: images" go_fetch "${FILE/%\.jpg/-500.jpg}" "https://coverartarchive.org/release/$(
+				echo "${FILE}" | ${SED} -e "s|^image.(${ID_MBID_CHARS})\.|\1/|g" -e "s|\.jpg|-500.jpg|g"
+			)" || return 1
+			run_cmd "${FUNCNAME}: images" ${LN} ${FILE/%\.jpg/-500.jpg} ${FILE}
+		fi
+	done
 	if {
 		[[ ! -s _image.icon.png		]] ||
 		{ { [[ ! -s _image.front.jpg	]] || [[ $(basename $(realpath _image.front.jpg))	!= $(basename $(realpath ${ID_FCVR})) ]]; } && [[ ${ID_FCVR} != "null" ]]; } ||
@@ -1508,7 +1520,7 @@ function flac_hacks {
 	elif [[ ${1} == -i ]]; then
 		shift
 		for FILE in "${@}"; do
-			echo "# wget -O ${FILE/%\.jpg/-500.jpg} https://coverartarchive.org/release/$(echo "${FILE/#image.}" | ${SED} -e "s|^(${ID_MBID_CHARS})\.|\1/|g" -e "s|\.jpg|-500.jpg|g")"
+			echo "# wget -O ${FILE/%\.jpg/-500.jpg} https://coverartarchive.org/release/$(echo "${FILE}" | ${SED} -e "s|^image.(${ID_MBID_CHARS})\.|\1/|g" -e "s|\.jpg|-500.jpg|g")"
 		done | sort -u >>.metadata
 		for FILE in "${@}"; do
 			echo "# ln ${FILE/%\.jpg/-500.jpg} ${FILE}"
