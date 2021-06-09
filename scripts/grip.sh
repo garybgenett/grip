@@ -98,7 +98,7 @@ declare CHMOD="644"
 declare RSYNC_U="${RSYNC_U} --checksum"
 declare HTML_DUMP="w3m -dump"
 declare JSON_CMD="jq --raw-output"
-declare IMAGE_CMD="feh --scale-down --geometry 800x600 --sort name --preload --thumbnails --thumb-redraw 0"
+declare IMAGE_CMD="feh --scale-down --geometry 800x600 --sort name --preload --thumbnails --thumb-redraw 0 --index-info ''"
 declare TAR_CMD="tar --xz -vv"
 declare FLAC_OPTS="
 	--force \
