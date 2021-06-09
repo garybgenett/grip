@@ -93,6 +93,8 @@ declare ID_COGS= ; declare ID_COGS_CHARS="m?[0-9]+"
 
 ########################################
 
+declare CHMOD="644"
+
 declare RSYNC_U="${RSYNC_U} --checksum"
 declare HTML_DUMP="w3m -dump"
 declare JSON_CMD="jq --raw-output"
@@ -1167,6 +1169,7 @@ function cd_encode {
 		function tarfiles {
 			find ./ -maxdepth 1 ! -type d | ${SED} "s|^\./||g" | sort
 		}
+		run_cmd "${FUNCNAME}: archive" chmod ${CHMOD} $(tarfiles)
 		run_cmd "${FUNCNAME}: archive" ${FLAC_HASH} $(tarfiles) \
 			| ${GREP} -v \
 				-e " _checksum" \
