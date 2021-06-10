@@ -47,6 +47,7 @@ declare CD_SPEED="6"
 declare CD_SPEED_RESCUE="1"
 
 declare FLAC_MANY="Various Artists"
+declare FLAC_BLNK="(silence)"
 # flac_tdiv must be completely unique; it can not be used anywhere else without causing issues
 declare FLAC_TDIV=" // "	# no dashes (-), pipes (|), or regular expression grouping operators: )][(
 declare FLAC_ADIV="; "		# no dashes (-), pipes (|), or regular expression grouping operators: )][(
@@ -1075,7 +1076,7 @@ function cd_encode {
 		echo -en "ALBUM=$(meta_get TITL)\n"					>>_metadata.tags
 		echo -en "ARTIST=$(meta_get ARTS)\n"					>>_metadata.tags
 		echo -en "DATE=$(meta_get YEAR)\n"					>>_metadata.tags
-		function do_index {
+		function index_num {
 			if [[ ${1} == [0-9] ]]; then
 				echo -en "00${1}"
 			elif [[ ${1} == [0-9][0-9] ]]; then
@@ -1085,31 +1086,34 @@ function cd_encode {
 			fi
 			return 0
 		}
+		function index_do {
+			declare TRK="${1}" && shift
+			declare FLG="${1}" && shift
+			if [[ ${TRK} == [0-9] ]]; then
+				TRK="0${TRK}"
+			fi
+			for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${TRK}${FLG}/([0-9]{2}:[0-9]{2})/(.+)$"); do
+				declare MRK="$(echo "${NUM}" | ${SED} "s|^${TRK}${FLG}/([0-9]{2}:[0-9]{2})/(.+)$|\1|g")"
+				declare NAM="$(echo "${NUM}" | ${SED} "s|^${TRK}${FLG}/([0-9]{2}:[0-9]{2})/(.+)$|\2|g")"
+				NAM="${NAM//${FLAC_ISEP}/ }"
+				IDXN="$(index_num ${IDXN})"
+				echo -en "CHAPTER${IDXN}=00:${MRK}.000\n"		>>_metadata.tags
+				echo -en "CHAPTER${IDXN}NAME=${FLAC_INDX}${NAM}\n"	>>_metadata.tags
+				IDXN="$(expr ${IDXN} + 1)"
+			done
+			return 0
+		}
 		declare TRCK="$(meta_get TRCK | ${SED} "s|^0||g")"
 		declare IDXN="1"
 		FILE="1"
-		# magic numbers!
 		while {
 			(( ${IDXN} <= 999 )) &&
-			(( ${FILE} <= 100 ));	# 99 +1
+			(( ${FILE} <= ${TRCK} ));
 		}; do
-			IDXN="$(do_index ${IDXN})"
 			if [[ ${FILE} == [0-9] ]]; then
 				FILE="0${FILE}"
 			fi
-			for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})/(.+)$"); do
-				declare MRK="$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})/(.+)$|\1|g")"
-				declare NAM="$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})/(.+)$|\2|g")"
-				NAM="${NAM//${FLAC_ISEP}/ }"
-				echo -en "CHAPTER${IDXN}=00:${MRK}.000\n"			>>_metadata.tags
-				echo -en "CHAPTER${IDXN}NAME=${FLAC_INDX}${NAM}\n"		>>_metadata.tags
-				IDXN="$(expr ${IDXN} + 1)"
-				IDXN="$(do_index ${IDXN})"
-			done
-			if (( ${FILE/#0} > ${TRCK} )); then
-				FILE="$(expr ${FILE} + 1)"
-				continue
-			fi
+			index_do ${FILE} "[-]"
 			declare MRK="$(
 				${GREP} -A2 "^  TRACK ${FILE} AUDIO$" audio.cue |
 				${SED} -n "s|^    INDEX 01 ([0-9]{2}:[0-9]{2}):[0-9]{2}$|\1|gp"
@@ -1117,18 +1121,20 @@ function cd_encode {
 			for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})$"); do
 				MRK="$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})$|\1|g")"
 			done
+			IDXN="$(index_num ${IDXN})"
 			echo -en "CHAPTER${IDXN}=00:${MRK}.000\n"				>>_metadata.tags
 			echo -en "CHAPTER${IDXN}NAME="						>>_metadata.tags
 			echo -en "${FILE}${FLAC_NDIV}"						>>_metadata.tags
 			echo -en "$(meta_get ${FILE}_T)${FLAC_TDIV}$(meta_get ${FILE}_A)"	>>_metadata.tags
 			echo -en "\n"								>>_metadata.tags
 			IDXN="$(expr ${IDXN} + 1)"
+			index_do ${FILE} "[+]?"
 			FILE="$(expr ${FILE} + 1)"
 		done
 		if [[ $(meta_get ARTS) == ${FLAC_MANY} ]]; then
-			${SED} -i "s|^(TITLE=)${FLAC_MANY}${FLAC_TDIV}|\1|g"			_metadata.tags
+			${SED} -i "s|^(TITLE=)${FLAC_MANY}${FLAC_TDIV}|\1|g"	_metadata.tags
 		else
-			${SED} -i "s|^(CHAPTER.+)${FLAC_TDIV}.+$|\1|g"				_metadata.tags
+			${SED} -i "s|^(CHAPTER.+)${FLAC_TDIV}.+$|\1|g"		_metadata.tags
 		fi
 		touch -r .metadata _metadata.tags
 	fi
