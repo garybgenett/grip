@@ -939,6 +939,20 @@ function cd_encode {
 		fi
 		sleep 1;
 		${IMAGE_CMD} _image.*.{png,jpg} 2>/dev/null || return 1
+		declare FAIL="false"
+		for FILE in $(meta_get SIZE); do
+			if {
+				[[ ${FILE} == $(meta_get FCVR) ]] ||
+				[[ ${FILE} == $(meta_get BCVR) ]] ||
+				[[ ${FILE} == $(meta_get MCVR) ]];
+			}; then
+				${GREP} "${FILE}" .metadata
+				FAIL="true"
+			fi
+		done
+		if ${FAIL}; then
+			return 1
+		fi
 	fi
 	run_cmd "${FUNCNAME}" ${LL} _image.*
 
