@@ -120,6 +120,7 @@ export XZ_OPT="]
 
 declare FAIL="false"
 declare FILE=
+declare NUM=
 
 ################################################################################
 
@@ -1096,10 +1097,9 @@ function cd_encode {
 			if [[ ${FILE} == [0-9] ]]; then
 				FILE="0${FILE}"
 			fi
-			declare IDX=
-			for IDX in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})/(.+)$"); do
-				declare MRK="$(echo "${IDX}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})/(.+)$|\1|g")"
-				declare NAM="$(echo "${IDX}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})/(.+)$|\2|g")"
+			for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})/(.+)$"); do
+				declare MRK="$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})/(.+)$|\1|g")"
+				declare NAM="$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})/(.+)$|\2|g")"
 				NAM="${NAM//${FLAC_ISEP}/ }"
 				echo -en "CHAPTER${IDXN}=00:${MRK}.000\n"			>>_metadata.tags
 				echo -en "CHAPTER${IDXN}NAME=${FLAC_INDX}${NAM}\n"		>>_metadata.tags
@@ -1114,8 +1114,8 @@ function cd_encode {
 				${GREP} -A2 "^  TRACK ${FILE} AUDIO$" audio.cue |
 				${SED} -n "s|^    INDEX 01 ([0-9]{2}:[0-9]{2}):[0-9]{2}$|\1|gp"
 			)"
-			for IDX in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})$"); do
-				MRK="$(echo "${IDX}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})$|\1|g")"
+			for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})$"); do
+				MRK="$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})$|\1|g")"
 			done
 			echo -en "CHAPTER${IDXN}=00:${MRK}.000\n"				>>_metadata.tags
 			echo -en "CHAPTER${IDXN}NAME="						>>_metadata.tags
@@ -1383,8 +1383,8 @@ function flac_export {
 			${GREP} -A2 "^  TRACK ${FILE} AUDIO$" audio.cue |
 			${SED} -n "s|^    INDEX 01 ([0-9]{2}:[0-9]{2}:[0-9]{2})$|\1|gp"
 		)"
-		for IDX in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})$"); do
-			${SED} -i "s|${MRK}|$(echo "${IDX}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})$|\1|g"):00|g" ${CUEDAT}.${FUNCNAME}
+		for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})$"); do
+			${SED} -i "s|${MRK}|$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})$|\1|g"):00|g" ${CUEDAT}.${FUNCNAME}
 		done
 		FILE="$(expr ${FILE} + 1)"
 	done
