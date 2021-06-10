@@ -1106,6 +1106,12 @@ function cd_encode {
 		declare TRCK="$(meta_get TRCK | ${SED} "s|^0||g")"
 		declare IDXN="1"
 		FILE="1"
+		declare BEG="99"
+		declare END="0"
+		for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^([0-9]{2})-([0-9]{2})$"); do
+			BEG="$(echo "${NUM}" | ${SED} "s|^([0-9]{2})-([0-9]{2})$|\1|g")"
+			END="$(echo "${NUM}" | ${SED} "s|^([0-9]{2})-([0-9]{2})$|\2|g")"
+		done
 		while {
 			(( ${IDXN} <= 999 )) &&
 			(( ${FILE} <= ${TRCK} ));
@@ -1121,13 +1127,19 @@ function cd_encode {
 			for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})$"); do
 				MRK="$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})$|\1|g")"
 			done
-			IDXN="$(index_num ${IDXN})"
-			echo -en "CHAPTER${IDXN}=00:${MRK}.000\n"				>>_metadata.tags
-			echo -en "CHAPTER${IDXN}NAME="						>>_metadata.tags
-			echo -en "${FILE}${FLAC_NDIV}"						>>_metadata.tags
-			echo -en "$(meta_get ${FILE}_T)${FLAC_TDIV}$(meta_get ${FILE}_A)"	>>_metadata.tags
-			echo -en "\n"								>>_metadata.tags
-			IDXN="$(expr ${IDXN} + 1)"
+			declare NAM="${FILE}${FLAC_NDIV}$(meta_get ${FILE}_T)${FLAC_TDIV}$(meta_get ${FILE}_A)"
+			if (( ${FILE/#0} == ${BEG} )); then
+				NAM="${FLAC_BLNK}"
+			fi
+			if {
+				(( ${FILE/#0} <= ${BEG} )) ||
+				(( ${FILE/#0} > ${END} ));
+			}; then
+				IDXN="$(index_num ${IDXN})"
+				echo -en "CHAPTER${IDXN}=00:${MRK}.000\n"	>>_metadata.tags
+				echo -en "CHAPTER${IDXN}NAME=${NAM}\n"		>>_metadata.tags
+				IDXN="$(expr ${IDXN} + 1)"
+			fi
 			index_do ${FILE} "[+]?"
 			FILE="$(expr ${FILE} + 1)"
 		done
