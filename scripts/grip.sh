@@ -624,7 +624,7 @@ function cd_encode {
 		run_cmd "${FUNCNAME}: mbid" go_fetch "mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}" || return 1
 		strip_file mb.${ID_DISC}.html
 	fi
-	declare FAIL="false"
+	FAIL="false"
 	if {
 		[[ ${ID_MBID} != null ]] &&
 		[[ ${ID_CODE} != null ]] &&
@@ -700,7 +700,7 @@ function cd_encode {
 		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json" || return 1
 		strip_file id.${ID_MBID}.json
 	fi
-	declare FAIL="false"
+	FAIL="false"
 	if {
 		[[ ${ID_MBID} != null ]] &&
 		[[ ! -f id.${ID_MBID}.html.null ]] && {
@@ -939,7 +939,7 @@ function cd_encode {
 		fi
 		sleep 1;
 		${IMAGE_CMD} _image.*.{png,jpg} 2>/dev/null || return 1
-		declare FAIL="false"
+		FAIL="false"
 		for FILE in $(meta_get SIZE); do
 			if {
 				[[ ${FILE} == $(meta_get FCVR) ]] ||
@@ -1020,7 +1020,7 @@ function cd_encode {
 		ID_NAME="$(meta_get NAME)"
 	fi
 	if {
-		declare FAIL="false"
+		FAIL="false"
 		if ${GREP} "${FILEALL_CHARS/#[/[^}" .metadata; then FAIL="true"; fi
 		if { [[ -z $(meta_get NAME) ]] || [[ -z $(meta_get NAME | ${GREP} -o "^${ID_NAME_CHARS}$") ]]; }; then echo -en "NAME: "; meta_get NAME; FAIL="true"; fi
 		if { [[ -z $(meta_get TITL) ]] || [[ -z $(meta_get TITL | ${GREP} -o "^${ID_TITL_CHARS}$") ]]; }; then echo -en "TITL: "; meta_get TITL; FAIL="true"; fi
