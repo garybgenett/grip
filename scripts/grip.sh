@@ -393,6 +393,20 @@ function cd_encode {
 	run_cmd "${FUNCNAME}" cat .metadata
 
 	########################################
+	declare RESET="false"
+	if [[ ${1} == -r ]]; then
+		shift
+		RESET="true"
+	fi
+	if {
+		${RESET} &&
+		! ${CD_ENCODE_LOOP};
+	}; then
+		${RM} _image.* *.null *.html *.json
+		${FUNCNAME} -s
+	fi
+
+	########################################
 	if [[ ${1} == -s ]]; then
 		shift
 		declare SAFE_LIST="
@@ -934,12 +948,12 @@ function cd_encode {
 			fi
 			return 0
 		}
-		{
+		if ! ${RESET}; then
 			echo -en "\${IMAGE_CMD}: ${IMAGE_CMD}\n"
 			${IMAGE_CMD} image.*.{png,jpg} &
 			sleep 0.1; jobs 1 2>/dev/null || return 1
 			sleep 0.1; jobs 1 2>/dev/null || return 1
-		}
+		fi
 		if [[ ! -f _image.front.jpg ]]; then
 			touch _image.front.jpg
 		fi
@@ -966,7 +980,9 @@ function cd_encode {
 			fi
 		fi
 		sleep 1;
-		${IMAGE_CMD} _image.*.{png,jpg} 2>/dev/null || return 1
+		if ! ${RESET}; then
+			${IMAGE_CMD} _image.*.{png,jpg} 2>/dev/null || return 1
+		fi
 		FAIL="false"
 		for FILE in $(meta_get SIZE); do
 			if {
@@ -1657,6 +1673,11 @@ function flac_rebuild {
 		AUTO="true"
 		shift
 	fi
+	declare REST=
+	if [[ ${1} == -r ]]; then
+		REST="${1}"
+		shift
+	fi
 	for FILE in "${@}"; do
 		[[ -z $(file ${FILE} | ${GREP} "FLAC") ]] && continue
 		${_SELF} ${FILE}											|| return 1
@@ -1666,7 +1687,7 @@ function flac_rebuild {
 		${RM} ${FILE}.dir/${FILE}.dir/_metadata*								|| return 1
 		${UNPK} && continue
 		if ${AUTO}; then
-			(cd ${FILE}.dir/${FILE}.dir && EDITOR="cat" DATE="$(cat .exported)" ${_SELF} -c)		|| return 1
+			(cd ${FILE}.dir/${FILE}.dir && EDITOR="cat" DATE="$(cat .exported)" cd_encode ${REST})		|| return 1
 			diff ${DIFF_OPTS} ${FILE}.dir ${FILE}.dir/${FILE}.dir >${FILE}.diff 2>&1
 		else
 			(cd ${FILE}.dir/${FILE}.dir && EDITOR="cat" DATE="$(cat .exported)" PROMPT="simple" ${SHELL})	|| return 1
