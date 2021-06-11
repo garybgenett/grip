@@ -354,6 +354,8 @@ function cd_cuefile {
 #	cat .audio.cue
 #	cdir -D -n -d /dev/sr0
 
+declare CD_ENCODE_LOOP="false"
+
 function cd_encode {
 	# https://www.linux-magazine.com/Issues/2018/207/FLAC-The-premier-digital-audio-codec
 	#	https://xiph.org/flac/documentation_tools_flac.html
@@ -608,7 +610,7 @@ function cd_encode {
 
 	########################################
 	run_cmd "${FUNCNAME}: mbid"
-	ID_MBID="$(meta_get MBID)"
+	${CD_ENCODE_LOOP} || ID_MBID="$(meta_get MBID)"
 	run_cmd "${FUNCNAME}: mbid: lookup"
 	if {
 		[[ ${ID_MBID} != null ]] &&
@@ -729,7 +731,7 @@ function cd_encode {
 
 	########################################
 	run_cmd "${FUNCNAME}: cogs"
-	ID_COGS="$(meta_get COGS)"
+	${CD_ENCODE_LOOP} || ID_COGS="$(meta_get COGS)"
 	run_cmd "${FUNCNAME}: cogs: select"
 	if {
 		[[ ${ID_COGS} != null ]] &&
@@ -778,9 +780,6 @@ function cd_encode {
 
 	########################################
 	run_cmd "${FUNCNAME}: images"
-	ID_FCVR="$(meta_get FCVR)"
-	ID_BCVR="$(meta_get BCVR)"
-	ID_MCVR="$(meta_get MCVR)"
 	if {
 		[[ ${ID_MBID} != null ]] &&
 		[[ ! -f image.${ID_MBID}.json.null ]] && {
@@ -869,6 +868,31 @@ function cd_encode {
 			run_cmd "${FUNCNAME}: images" ${LN} ${FILE/%\.jpg/-500.jpg} ${FILE}
 		fi
 	done
+
+	########################################
+	if ${CD_ENCODE_LOOP}; then
+		return 0
+	fi
+	run_cmd "${FUNCNAME}: looping"
+	for FILE in $(${SED} -n "s/^- ?(MBID|COGS):?[[:space:]]+/\1=/gp" .metadata); do
+		run_cmd "${FUNCNAME}: looping: ${FILE}"
+		CD_ENCODE_LOOP="true"
+		eval ID_${FILE}
+		${FUNCNAME} || return 1
+	done
+	if ${CD_ENCODE_LOOP}; then
+		run_cmd "${FUNCNAME}: looping: complete"
+		ID_MBID="$(meta_get MBID)"
+		ID_COGS="$(meta_get COGS)"
+		${FUNCNAME} || return 1
+		CD_ENCODE_LOOP="false"
+	fi
+
+	########################################
+	run_cmd "${FUNCNAME}: images: select"
+	ID_FCVR="$(meta_get FCVR)"
+	ID_BCVR="$(meta_get BCVR)"
+	ID_MCVR="$(meta_get MCVR)"
 	if {
 		[[ ! -s _image.icon.png		]] ||
 		{ { [[ ! -s _image.front.jpg	]] || [[ $(basename $(realpath _image.front.jpg))	!= $(basename $(realpath ${ID_FCVR})) ]]; } && [[ ${ID_FCVR} != "null" ]]; } ||
