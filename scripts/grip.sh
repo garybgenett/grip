@@ -390,6 +390,7 @@ function cd_encode {
 	fi
 	run_cmd "${FUNCNAME}" cat .metadata
 
+	########################################
 	if [[ ${1} == -s ]]; then
 		shift
 		declare SAFE_LIST="
@@ -422,6 +423,8 @@ function cd_encode {
 		return 0
 	fi
 
+	########################################
+	run_cmd "${FUNCNAME}: audio"
 	if {
 		[[ ! -s .exported	]] &&
 		[[ ! -s .audio.log	]] &&
@@ -429,7 +432,6 @@ function cd_encode {
 		[[ ! -s audio.cue	]] &&
 		[[ ! -s audio.wav	]];
 	}; then
-		run_cmd "${FUNCNAME}: audio"
 		cat /dev/null >.audio.log
 #>>> version (cdda) >
 		run_cmd "${FUNCNAME}: audio" $(which cdparanoia)	--version	2>&1 | tee -a .audio.log
@@ -503,7 +505,6 @@ function cd_encode {
 #			2>&1 | tee -a .audio.log
 #			[[ ${PIPESTATUS[0]} != 0 ]] && return 1
 #>>> wav (shntool) <
-		run_cmd "${FUNCNAME}: audio"
 		${RSYNC_U} audio.cue .audio.cue		|| return 1
 		${SED} -i \
 			-e "/^REM/d" \
@@ -530,7 +531,6 @@ function cd_encode {
 		${FUNCNAME} -s
 		return 1
 	fi
-
 	if ! run_cmd "${FUNCNAME}" diff ${DIFF_OPTS} .audio.cue audio.cue; then
 		if ! run_cmd "${FUNCNAME}" diff ${DIFF_OPTS} _audio.cue audio.cue; then
 			return 1
@@ -539,6 +539,8 @@ function cd_encode {
 		return 1
 	fi
 
+	########################################
+	run_cmd "${FUNCNAME}: null"
 	for FILE in $(meta_get NULL); do
 		if [[ ! -f ${FILE}.null ]]; then
 			touch ${FILE}.null
@@ -546,12 +548,13 @@ function cd_encode {
 		${RM} ${FILE} >/dev/null 2>&1
 	done
 
+	########################################
+	run_cmd "${FUNCNAME}: code"
 	ID_CODE="$(meta_get CODE)"
 	if {
 		[[ ${ID_CODE} != null ]] &&
 		[[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]];
 	}; then
-		run_cmd "${FUNCNAME}: code"
 		echo -en "BARCODE: $(which cdda2wav) -info-only -device ${SOURCE}\n"
 		FILE="$(${SED} -n "s|^CATALOG (.+)$|\1|gp" audio.cue)"
 		if [[ -n ${FILE} ]]; then
@@ -574,7 +577,6 @@ function cd_encode {
 		BARCODE="0000000000000"
 	fi
 	if [[ $(meta_get audio.cue CATALOG) != ${BARCODE} ]]; then
-		run_cmd "${FUNCNAME}: code"
 		if [[ -z $(${GREP} "^CATALOG" audio.cue) ]]; then
 			${SED} -i "s|^(FILE .+)$|CATALOG ${BARCODE}\n\1|g" audio.cue
 		else
@@ -583,12 +585,13 @@ function cd_encode {
 		${RSYNC_U} audio.cue _audio.cue || return 1
 	fi
 
+	########################################
+	run_cmd "${FUNCNAME}: disc"
 	ID_DISC="$(meta_get DISC)"
 	if {
 		[[ ${ID_DISC} != null ]] &&
 		[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]];
 	}; then
-		run_cmd "${FUNCNAME}: disc"
 		echo -en "CDINDEX: $(which cdda2wav) -info-only -device ${SOURCE}\n"
 		if [[ -n ${ID_DISC} ]]; then
 			echo -en "CDINDEX: ${ID_DISC}\n"
@@ -603,14 +606,16 @@ function cd_encode {
 		return 1
 	fi
 
+	########################################
+	run_cmd "${FUNCNAME}: mbid"
 	ID_MBID="$(meta_get MBID)"
+	run_cmd "${FUNCNAME}: mbid: lookup"
 	if {
 		[[ ${ID_MBID} != null ]] &&
 		[[ ${ID_CODE} != null ]] &&
 		[[ ! -f mb.${ID_CODE}.html.null ]] &&
 		[[ ! -s mb.${ID_CODE}.html ]];
 	}; then
-		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "mb.${ID_CODE}.html" "https://musicbrainz.org/search?advanced=1&type=release&query=barcode:${ID_CODE}" || return 1
 		strip_file mb.${ID_CODE}.html
 	fi
@@ -620,7 +625,6 @@ function cd_encode {
 		[[ ! -f mb.${ID_DISC}.html.null ]] &&
 		[[ ! -s mb.${ID_DISC}.html ]];
 	}; then
-		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "mb.${ID_DISC}.html" "https://musicbrainz.org/cdtoc/${ID_DISC}" || return 1
 		strip_file mb.${ID_DISC}.html
 	fi
@@ -656,11 +660,11 @@ function cd_encode {
 	if ${FAIL}; then
 		return 1
 	fi
+	run_cmd "${FUNCNAME}: mbid: select"
 	if {
 		[[ ${ID_MBID} != null ]] &&
 		[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]];
 	}; then
-		run_cmd "${FUNCNAME}: mbid"
 		declare MBIDS=($(
 			${SED} "s|(<a href=\"/release/${ID_MBID_CHARS}\")|\n\1|g" mb.${ID_CODE}.html mb.${ID_DISC}.html 2>/dev/null |
 			${SED} -n "s|^.+/release/(${ID_MBID_CHARS}).+>([A-Z]{2})<.+$|\2:\1|gp" |
@@ -682,12 +686,12 @@ function cd_encode {
 	}; then
 		return 1
 	fi
+	run_cmd "${FUNCNAME}: mbid: download"
 	if {
 		[[ ${ID_MBID} != null ]] &&
 		[[ ! -f id.${ID_MBID}.html.null ]] &&
 		[[ ! -s id.${ID_MBID}.html ]];
 	}; then
-		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.html" "https://musicbrainz.org/release/${ID_MBID}" || return 1
 		strip_file id.${ID_MBID}.html
 	fi
@@ -696,7 +700,6 @@ function cd_encode {
 		[[ ! -f id.${ID_MBID}.json.null ]] &&
 		[[ ! -s id.${ID_MBID}.json ]];
 	}; then
-		run_cmd "${FUNCNAME}: mbid"
 		run_cmd "${FUNCNAME}: mbid" go_fetch "id.${ID_MBID}.json" "https://musicbrainz.org/ws/2/release/${ID_MBID}?inc=aliases+artist-credits+labels+discids+recordings&fmt=json" || return 1
 		strip_file id.${ID_MBID}.json
 	fi
@@ -724,12 +727,14 @@ function cd_encode {
 		return 1
 	fi
 
+	########################################
+	run_cmd "${FUNCNAME}: cogs"
 	ID_COGS="$(meta_get COGS)"
+	run_cmd "${FUNCNAME}: cogs: select"
 	if {
 		[[ ${ID_COGS} != null ]] &&
 		[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]];
 	}; then
-		run_cmd "${FUNCNAME}: cogs"
 		if [[ ${ID_CODE} != null ]]; then
 			echo -en "DISCOGS (url): https://www.discogs.com/search/?type=release&q=${ID_CODE}\n"
 		fi
@@ -750,12 +755,12 @@ function cd_encode {
 	}; then
 		return 1
 	fi
+	run_cmd "${FUNCNAME}: cogs: download"
 	if {
 		[[ ${ID_COGS} != null ]] &&
 		[[ ! -f id.${ID_COGS}.html.null ]] &&
 		[[ ! -s id.${ID_COGS}.html ]];
 	}; then
-		run_cmd "${FUNCNAME}: cogs"
 		if [[ ${ID_COGS//[0-9]} == m ]]; then	run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_COGS}.html" "https://www.discogs.com/master/${ID_COGS/#m}" || return 1
 		else					run_cmd "${FUNCNAME}: cogs" go_fetch "id.${ID_COGS}.html" "https://www.discogs.com/release/${ID_COGS}" || return 1
 		fi
@@ -771,6 +776,8 @@ function cd_encode {
 		return 1
 	fi
 
+	########################################
+	run_cmd "${FUNCNAME}: images"
 	ID_FCVR="$(meta_get FCVR)"
 	ID_BCVR="$(meta_get BCVR)"
 	ID_MCVR="$(meta_get MCVR)"
@@ -781,7 +788,6 @@ function cd_encode {
 			[[ -z $(${LS} _image.${ID_MBID}.[0-9-]* 2>/dev/null) ]];
 		};
 	}; then
-		run_cmd "${FUNCNAME}: images"
 		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.json"		"http://coverartarchive.org/release/${ID_MBID}"		|| return 1
 #>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.front.jpg"	"http://coverartarchive.org/release/${ID_MBID}/front"	|| return 1
 #>>>		run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_MBID}.back.jpg"	"http://coverartarchive.org/release/${ID_MBID}/back"	|| return 1
@@ -815,7 +821,6 @@ function cd_encode {
 			[[ -z $(${LS} _image.${ID_COGS}.[0-9-]* 2>/dev/null) ]];
 		};
 	}; then
-		run_cmd "${FUNCNAME}: images"
 		if [[ ${ID_COGS//[0-9]} == m ]]; then	run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_COGS}.html" "https://www.discogs.com/master/${ID_COGS/#m}/images" || return 1
 		else					run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_COGS}.html" "https://www.discogs.com/release/${ID_COGS}/images" || return 1
 		fi
@@ -870,7 +875,6 @@ function cd_encode {
 		{ { [[ ! -s _image.back.jpg	]] || [[ $(basename $(realpath _image.back.jpg))	!= $(basename $(realpath ${ID_BCVR})) ]]; } && [[ ${ID_FCVR} != "null" ]]; } ||
 		{ { [[ ! -s _image.media.jpg	]] || [[ $(basename $(realpath _image.media.jpg))	!= $(basename $(realpath ${ID_MCVR})) ]]; } && [[ ${ID_FCVR} != "null" ]]; };
 	}; then
-		run_cmd "${FUNCNAME}: images"
 		if [[ ${ID_FCVR} == null ]]; then
 			if ! convert -verbose -size 600x600 canvas:${NULL_IMAGE_COLOR} png:image.null.jpg; then
 				return 1
@@ -956,6 +960,8 @@ function cd_encode {
 	fi
 	run_cmd "${FUNCNAME}" ${LL} _image.*
 
+	########################################
+	run_cmd "${FUNCNAME}: metadata"
 	ID_NAME="$(meta_get NAME)"
 	if {
 		[[ -z $(meta_get TITL) ]] ||
@@ -963,7 +969,6 @@ function cd_encode {
 		[[ -z $(meta_get YEAR) ]] ||
 		[[ -z $(meta_get TRCK) ]];
 	}; then
-		run_cmd "${FUNCNAME}: metadata"
 		declare TITL="$(${JSON_CMD} '.title'				id.${ID_MBID}.json)"
 		declare YEAR="$(${JSON_CMD} '.date'				id.${ID_MBID}.json | ${SED} "s|^([0-9]{4}).*$|\1|g")"
 		declare TRCK="$(${JSON_CMD} '.media[].tracks[] | .position'	id.${ID_MBID}.json | sort -n | tail -n1)"
@@ -1009,13 +1014,11 @@ function cd_encode {
 		done
 	fi
 	if [[ -z ${ID_NAME} ]]; then
-		run_cmd "${FUNCNAME}: metadata"
 		ID_NAME="$(namer "$(meta_get ARTS).$(meta_get TITL).$(meta_get YEAR)")"
 		ID_NAME="$(echo "${ID_NAME}" | ${SED} "s|^$(namer "${FLAC_MANY}")\.||g")"
 		meta_set NAME ${ID_NAME}
 	fi
 	if [[ ! -f _metadata ]]; then
-		run_cmd "${FUNCNAME}: metadata"
 		${EDITOR} .metadata
 		ID_NAME="$(meta_get NAME)"
 	fi
@@ -1049,11 +1052,12 @@ function cd_encode {
 		return 1
 	fi
 
+	########################################
+	run_cmd "${FUNCNAME}: metadata: files"
 	if {
 		[[ ! -f _metadata ]] ||
 		[[ -n $(find .metadata -newer _metadata 2>/dev/null) ]];
 	}; then
-		run_cmd "${FUNCNAME}: metadata"
 		${RSYNC_U} audio.cue _metadata
 		${SED} -i \
 			-e "/^REM/d" \
@@ -1081,7 +1085,6 @@ function cd_encode {
 		[[ ! -f _metadata.tags ]] ||
 		[[ -n $(find .metadata -newer _metadata.tags 2>/dev/null) ]];
 	}; then
-		run_cmd "${FUNCNAME}: metadata"
 		cat /dev/null								>_metadata.tags
 		echo -en "VERSION=${DATE}"						>>_metadata.tags
 		[[ ${DATE} != $(cat .exported) ]] && echo -en " ($(cat .exported))"	>>_metadata.tags
@@ -1164,10 +1167,14 @@ function cd_encode {
 		fi
 		touch -r .metadata _metadata.tags
 	fi
+
+	########################################
+	run_cmd "${FUNCNAME}: metadata: info"
 	run_cmd "${FUNCNAME}" cueprint --input-format cue _metadata
 	run_cmd "${FUNCNAME}" cat _metadata
 	run_cmd "${FUNCNAME}" cat _metadata.tags
 
+	########################################
 	run_cmd "${FUNCNAME}: encode"
 	declare TAGS="$(
 		cat _metadata.tags | while read -r FILE; do
@@ -1208,6 +1215,7 @@ function cd_encode {
 		run_cmd "${FUNCNAME}: info" metaflac --export-cuesheet-to=-	${ID_NAME}.flac || return 1
 	fi
 
+	########################################
 	run_cmd "${FUNCNAME}: archive"
 	if [[ ! -s ${ID_NAME}.tar.xz ]]; then
 		function tarfiles {
@@ -1257,6 +1265,7 @@ function cd_encode {
 			|| return 1
 	fi
 
+	########################################
 	run_cmd "${FUNCNAME}: validate"
 	if [[ ! -d ${ID_NAME}.flac.dir ]]; then
 		flac_unpack ${ID_NAME}.flac || return 1
@@ -1270,6 +1279,7 @@ function cd_encode {
 		fi
 	fi
 
+	########################################
 	run_cmd "${FUNCNAME}: complete"
 	run_cmd "${FUNCNAME}" ${_SELF} ${ID_NAME}.flac -x
 	run_cmd "${FUNCNAME}" metaflac \
