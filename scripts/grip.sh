@@ -355,6 +355,7 @@ function cd_cuefile {
 #	cdir -D -n -d /dev/sr0
 
 declare CD_ENCODE_LOOP="false"
+declare CD_ENCODE_LOOP_NAME=
 
 function cd_encode {
 	# https://www.linux-magazine.com/Issues/2018/207/FLAC-The-premier-digital-audio-codec
@@ -440,7 +441,14 @@ function cd_encode {
 	fi
 
 	########################################
-	run_cmd "${FUNCNAME}: audio"
+	if [[ -n ${CD_ENCODE_LOOP_NAME} ]]; then
+		CD_ENCODE_LOOP_NAME="${FUNCNAME} [${CD_ENCODE_LOOP_NAME}]"
+	else
+		CD_ENCODE_LOOP_NAME="${FUNCNAME}"
+	fi
+
+	########################################
+	run_cmd "${CD_ENCODE_LOOP_NAME}: audio"
 	if {
 		[[ ! -s .exported	]] &&
 		[[ ! -s .audio.log	]] &&
@@ -556,7 +564,7 @@ function cd_encode {
 	fi
 
 	########################################
-	run_cmd "${FUNCNAME}: null"
+	run_cmd "${CD_ENCODE_LOOP_NAME}: null"
 	for FILE in $(meta_get NULL); do
 		if [[ -f ${FILE} ]]; then
 			${RM} ${FILE}
@@ -567,7 +575,7 @@ function cd_encode {
 	done
 
 	########################################
-	run_cmd "${FUNCNAME}: code"
+	run_cmd "${CD_ENCODE_LOOP_NAME}: code"
 	ID_CODE="$(meta_get CODE)"
 	if {
 		[[ ${ID_CODE} != null ]] &&
@@ -604,7 +612,7 @@ function cd_encode {
 	fi
 
 	########################################
-	run_cmd "${FUNCNAME}: disc"
+	run_cmd "${CD_ENCODE_LOOP_NAME}: disc"
 	ID_DISC="$(meta_get DISC)"
 	if {
 		[[ ${ID_DISC} != null ]] &&
@@ -625,9 +633,9 @@ function cd_encode {
 	fi
 
 	########################################
-	run_cmd "${FUNCNAME}: mbid"
+	run_cmd "${CD_ENCODE_LOOP_NAME}: mbid"
 	${CD_ENCODE_LOOP} || ID_MBID="$(meta_get MBID)"
-	run_cmd "${FUNCNAME}: mbid: lookup"
+	run_cmd "${CD_ENCODE_LOOP_NAME}: mbid: lookup"
 	if {
 		[[ ${ID_MBID} != null ]] &&
 		[[ ${ID_CODE} != null ]] &&
@@ -678,7 +686,7 @@ function cd_encode {
 	if ${FAIL}; then
 		return 1
 	fi
-	run_cmd "${FUNCNAME}: mbid: select"
+	run_cmd "${CD_ENCODE_LOOP_NAME}: mbid: select"
 	if {
 		[[ ${ID_MBID} != null ]] &&
 		[[ -z $(echo "${ID_MBID}" | ${GREP} -o "^${ID_MBID_CHARS}$") ]];
@@ -704,7 +712,7 @@ function cd_encode {
 	}; then
 		return 1
 	fi
-	run_cmd "${FUNCNAME}: mbid: download"
+	run_cmd "${CD_ENCODE_LOOP_NAME}: mbid: download"
 	if {
 		[[ ${ID_MBID} != null ]] &&
 		[[ ! -f id.${ID_MBID}.html.null ]] &&
@@ -746,9 +754,9 @@ function cd_encode {
 	fi
 
 	########################################
-	run_cmd "${FUNCNAME}: cogs"
+	run_cmd "${CD_ENCODE_LOOP_NAME}: cogs"
 	${CD_ENCODE_LOOP} || ID_COGS="$(meta_get COGS)"
-	run_cmd "${FUNCNAME}: cogs: select"
+	run_cmd "${CD_ENCODE_LOOP_NAME}: cogs: select"
 	if {
 		[[ ${ID_COGS} != null ]] &&
 		[[ -z $(echo "${ID_COGS}" | ${GREP} -o "^${ID_COGS_CHARS}$") ]];
@@ -773,7 +781,7 @@ function cd_encode {
 	}; then
 		return 1
 	fi
-	run_cmd "${FUNCNAME}: cogs: download"
+	run_cmd "${CD_ENCODE_LOOP_NAME}: cogs: download"
 	if {
 		[[ ${ID_COGS} != null ]] &&
 		[[ ! -f id.${ID_COGS}.html.null ]] &&
@@ -795,7 +803,7 @@ function cd_encode {
 	fi
 
 	########################################
-	run_cmd "${FUNCNAME}: images"
+	run_cmd "${CD_ENCODE_LOOP_NAME}: images"
 	if {
 		[[ ${ID_MBID} != null ]] &&
 		[[ ! -f image.${ID_MBID}.json.null ]] && {
@@ -893,15 +901,19 @@ function cd_encode {
 	for FILE in $(${SED} -n "s/^- ?(MBID|COGS):?[[:space:]]+/\1=/gp" .metadata); do
 		run_cmd "${FUNCNAME}: looping: ${FILE}"
 		CD_ENCODE_LOOP="true"
+		CD_ENCODE_LOOP_NAME="${FILE}"
 		eval ID_${FILE}
 		${FUNCNAME} || return 1
 	done
 	if ${CD_ENCODE_LOOP}; then
-		run_cmd "${FUNCNAME}: looping: complete"
+		run_cmd "${FUNCNAME}: looping: final"
+		CD_ENCODE_LOOP_NAME="looping"
 		ID_MBID="$(meta_get MBID)"
 		ID_COGS="$(meta_get COGS)"
 		${FUNCNAME} || return 1
 		CD_ENCODE_LOOP="false"
+		CD_ENCODE_LOOP_NAME=
+		run_cmd "${FUNCNAME}: looping: complete"
 	fi
 
 	########################################
