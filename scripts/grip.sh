@@ -1321,7 +1321,7 @@ function cd_encode {
 
 	########################################
 	run_cmd "${FUNCNAME}: complete"
-	run_cmd "${FUNCNAME}" ${_SELF} ${ID_NAME}.flac -x
+	run_cmd "${FUNCNAME}" flac_unpack ${ID_NAME}.flac -x
 	run_cmd "${FUNCNAME}" metaflac \
 		--block-number="${FLAC_BLCK}" \
 		--export-picture-to=- \
@@ -1529,7 +1529,7 @@ function flac_playlist {
 		while read -r FILE; do
 			if [[ ! -s ${PLAYDIR}/${FILE} ]]; then
 				FILE="$(echo "${FILE}" | ${SED} -n "s|${SEARCH}|\1.flac ${PLAYDIR} \2|gp")"
-				${_SELF} ${FILE} || return 1
+				flac_unpack ${FILE} || return 1
 			fi
 		done
 	run_cmd "${FUNCNAME}" ${LL} ${PLAYDIR}
@@ -1592,7 +1592,7 @@ function flac_list {
 function flac_hacks {
 	if [[ ${1} == -l ]]; then
 		shift
-		${_SELF} "${@}" -l 2>&1 |
+		flac_unpack "${@}" -l 2>&1 |
 			${GREP} -A4 "^  TRACK [0-9]{2} AUDIO$" |
 			tr -d '\n' |
 			${SED} "s|(  TRACK )|\n\1|g" |
@@ -1630,14 +1630,14 @@ function flac_metadata {
 	if [[ ${1} == -l ]]; then
 		shift
 		for FILE in *.flac; do
-			${_SELF} ${FILE} -l 2>&1
+			flac_unpack ${FILE} -l 2>&1
 		done |
 			${PAGER} +/export-tags-to
 	else
 		${MKDIR} .logs
 		${MKDIR} .metadata
 		for FILE in *.flac; do
-			${_SELF} ${FILE} -x || return 1
+			flac_unpack ${FILE} -x || return 1
 			${RSYNC_U} ${FILE/%.flac}.log .logs/${FILE/%.flac}.log || return 1
 			${RSYNC_U} ${FILE/%.flac}.metadata .metadata/${FILE/%.flac}.metadata || return 1
 			${RM} ${FILE}.dir ${FILE/%.flac}.{log,metadata}
@@ -1680,9 +1680,9 @@ function flac_rebuild {
 	fi
 	for FILE in "${@}"; do
 		[[ -z $(file ${FILE} | ${GREP} "FLAC") ]] && continue
-		${_SELF} ${FILE}											|| return 1
+		flac_unpack ${FILE}											|| return 1
 		${RSYNC_U} ${FILE} ${FILE}.dir/${FILE}									|| return 1
-		${_SELF} ${FILE}.dir/${FILE}										|| return 1
+		flac_unpack ${FILE}.dir/${FILE}										|| return 1
 		${RSYNC_U} .metadata/${FILE/%.flac}.metadata ${FILE}.dir/${FILE}.dir/.metadata				|| return 1
 		${RM} ${FILE}.dir/${FILE}.dir/_metadata*								|| return 1
 		${UNPK} && continue
