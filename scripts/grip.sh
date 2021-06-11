@@ -1165,9 +1165,9 @@ function cd_encode {
 			if [[ ${TRK} == [0-9] ]]; then
 				TRK="0${TRK}"
 			fi
-			for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${TRK}${FLG}/([0-9]{2}:[0-9]{2})/(.+)$"); do
-				declare MRK="$(echo "${NUM}" | ${SED} "s|^${TRK}${FLG}/([0-9]{2}:[0-9]{2})/(.+)$|\1|g")"
-				declare NAM="$(echo "${NUM}" | ${SED} "s|^${TRK}${FLG}/([0-9]{2}:[0-9]{2})/(.+)$|\2|g")"
+			for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${TRK}${FLG}/([0-9]{2,3}:[0-9]{2})/(.+)$"); do
+				declare MRK="$(echo "${NUM}" | ${SED} "s|^${TRK}${FLG}/([0-9]{2,3}:[0-9]{2})/(.+)$|\1|g")"
+				declare NAM="$(echo "${NUM}" | ${SED} "s|^${TRK}${FLG}/([0-9]{2,3}:[0-9]{2})/(.+)$|\2|g")"
 				NAM="${NAM//${FLAC_ISEP}/ }"
 				IDXN="$(index_num ${IDXN})"
 				echo -en "CHAPTER${IDXN}=00:${MRK}.000\n"		>>_metadata.tags
@@ -1195,10 +1195,10 @@ function cd_encode {
 			index_do ${FILE} "[-]"
 			declare MRK="$(
 				${GREP} -A2 "^  TRACK ${FILE} AUDIO$" audio.cue |
-				${SED} -n "s|^    INDEX 01 ([0-9]{2}:[0-9]{2}):[0-9]{2}$|\1|gp"
+				${SED} -n "s|^    INDEX 01 ([0-9]{2,3}:[0-9]{2}):[0-9]{2}$|\1|gp"
 			)"
-			for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})$"); do
-				MRK="$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})$|\1|g")"
+			for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2,3}:[0-9]{2})$"); do
+				MRK="$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2,3}:[0-9]{2})$|\1|g")"
 			done
 			declare NAM="${FILE}${FLAC_NDIV}$(meta_get ${FILE}_T)${FLAC_TDIV}$(meta_get ${FILE}_A)"
 			if (( ${FILE/#0} == ${BEG} )); then
@@ -1478,10 +1478,10 @@ function flac_export {
 		fi
 		declare MRK="$(
 			${GREP} -A2 "^  TRACK ${FILE} AUDIO$" audio.cue |
-			${SED} -n "s|^    INDEX 01 ([0-9]{2}:[0-9]{2}:[0-9]{2})$|\1|gp"
+			${SED} -n "s|^    INDEX 01 ([0-9]{2,3}:[0-9]{2}:[0-9]{2})$|\1|gp"
 		)"
-		for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2}:[0-9]{2})$"); do
-			${SED} -i "s|${MRK}|$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2}:[0-9]{2})$|\1|g"):00|g" ${CUEDAT}.${FUNCNAME}
+		for NUM in $(meta_get INDX | tr ' ' '\n' | ${GREP} "^${FILE}/([0-9]{2,3}:[0-9]{2})$"); do
+			${SED} -i "s|${MRK}|$(echo "${NUM}" | ${SED} "s|^${FILE}/([0-9]{2,3}:[0-9]{2})$|\1|g"):00|g" ${CUEDAT}.${FUNCNAME}
 		done
 		FILE="$(expr ${FILE} + 1)"
 	done
@@ -1611,7 +1611,7 @@ function flac_hacks {
 			${GREP} -A4 "^  TRACK [0-9]{2} AUDIO$" |
 			tr -d '\n' |
 			${SED} "s|(  TRACK )|\n\1|g" |
-			${SED} -n "s|^  TRACK ([0-9]{2}).+INDEX 01 ([0-9]{2}:[0-9]{2}):[0-9]{2}$|\1/\2|gp"
+			${SED} -n "s|^  TRACK ([0-9]{2}).+INDEX 01 ([0-9]{2,3}:[0-9]{2}):[0-9]{2}$|\1/\2|gp"
 		echo -en "\n"
 		return 0
 	elif [[ ${1} == -i ]]; then
