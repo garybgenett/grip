@@ -576,7 +576,7 @@ function cd_encode {
 
 	########################################
 	run_cmd "${CD_ENCODE_LOOP_NAME}: code"
-	ID_CODE="$(meta_get CODE)"
+	${CD_ENCODE_LOOP} || ID_CODE="$(meta_get CODE)"
 	if {
 		[[ ${ID_CODE} != null ]] &&
 		[[ -z $(echo "${ID_CODE}" | ${GREP} -o "^${ID_CODE_CHARS}$") ]];
@@ -613,7 +613,7 @@ function cd_encode {
 
 	########################################
 	run_cmd "${CD_ENCODE_LOOP_NAME}: disc"
-	ID_DISC="$(meta_get DISC)"
+	${CD_ENCODE_LOOP} || ID_DISC="$(meta_get DISC)"
 	if {
 		[[ ${ID_DISC} != null ]] &&
 		[[ -z $(echo "${ID_DISC}" | ${GREP} -o "^${ID_DISC_CHARS}$") ]];
@@ -898,7 +898,7 @@ function cd_encode {
 		return 0
 	fi
 	run_cmd "${FUNCNAME}: looping"
-	for FILE in $(${SED} -n "s/^- ?(MBID|COGS):?[[:space:]]+/\1=/gp" .metadata); do
+	for FILE in $(${SED} -n "s/^- ?(CODE|DISC|MBID|COGS):?[[:space:]]+/\1=/gp" .metadata); do
 		run_cmd "${FUNCNAME}: looping: ${FILE}"
 		CD_ENCODE_LOOP="true"
 		CD_ENCODE_LOOP_NAME="${FILE}"
@@ -908,6 +908,8 @@ function cd_encode {
 	if ${CD_ENCODE_LOOP}; then
 		run_cmd "${FUNCNAME}: looping: final"
 		CD_ENCODE_LOOP_NAME="looping"
+		ID_CODE="$(meta_get CODE)"
+		ID_DISC="$(meta_get DISC)"
 		ID_MBID="$(meta_get MBID)"
 		ID_COGS="$(meta_get COGS)"
 		${FUNCNAME} || return 1
