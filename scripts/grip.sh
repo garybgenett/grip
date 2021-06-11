@@ -1641,8 +1641,8 @@ function flac_rebuild {
 		fi
 		touch -r ${FILE} ${FILE}.dir/${FILE}.dir/${FILE}							|| return 1
 		${RSYNC_U} ${FILE}.dir/${FILE}.dir/${FILE} ${FILE}							|| return 1
-		${RM} ${FILE}.dir											|| return 1
-		${AUTO} && { ${_SELF} ${FILE}										|| return 1; }
+		! ${AUTO} && { ${RM} ${FILE}.dir									|| return 1; }
+		${LL} ${FILE}*
 	done
 	return 0
 }
