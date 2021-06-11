@@ -558,10 +558,12 @@ function cd_encode {
 	########################################
 	run_cmd "${FUNCNAME}: null"
 	for FILE in $(meta_get NULL); do
+		if [[ -f ${FILE} ]]; then
+			${RM} ${FILE}
+		fi
 		if [[ ! -f ${FILE}.null ]]; then
 			touch ${FILE}.null
 		fi
-		${RM} ${FILE} >/dev/null 2>&1
 	done
 
 	########################################
@@ -1222,6 +1224,7 @@ function cd_encode {
 		done
 	)"
 	if [[ ! -s ${ID_NAME}.flac ]]; then
+		${RM} ${ID_NAME}.*
 		eval run_cmd "\"${FUNCNAME}: encode\"" flac \
 			${FLAC_OPTS} \
 			\
@@ -1240,20 +1243,18 @@ function cd_encode {
 			audio.wav \
 			|| return 1
 	fi
-	if [[ -f ${ID_NAME}.flac ]]; then
-		if [[ ! -s ${ID_NAME}.wav ]]; then
-#>>>			run_cmd "${FUNCNAME}: verify"	flac --force --analyze	${ID_NAME}.flac || return 1
-#>>>			run_cmd "${FUNCNAME}: verify"	flac --force --test	${ID_NAME}.flac || return 1
-			run_cmd "${FUNCNAME}: verify"	flac --force --decode	${ID_NAME}.flac || return 1
-			if ! run_cmd "${FUNCNAME}: verify" diff ${DIFF_OPTS} ${ID_NAME}.wav audio.wav; then
-				return 1
-			fi
+	if [[ ! -s ${ID_NAME}.wav ]]; then
+#>>>		run_cmd "${FUNCNAME}: verify"	flac --force --analyze	${ID_NAME}.flac || return 1
+#>>>		run_cmd "${FUNCNAME}: verify"	flac --force --test	${ID_NAME}.flac || return 1
+		run_cmd "${FUNCNAME}: verify"	flac --force --decode	${ID_NAME}.flac || return 1
+		if ! run_cmd "${FUNCNAME}: verify" diff ${DIFF_OPTS} ${ID_NAME}.wav audio.wav; then
+			return 1
 		fi
-		run_cmd "${FUNCNAME}: info" ffmpeg -i				${ID_NAME}.flac #>>> || return 1
-		run_cmd "${FUNCNAME}: info" metaflac --list			${ID_NAME}.flac | ${GREP} -A4 "^METADATA" | ${GREP} -v "^--$" #>>> || return 1
-		run_cmd "${FUNCNAME}: info" metaflac --export-tags-to=-		${ID_NAME}.flac || return 1
-		run_cmd "${FUNCNAME}: info" metaflac --export-cuesheet-to=-	${ID_NAME}.flac || return 1
 	fi
+	run_cmd "${FUNCNAME}: info" ffmpeg -i				${ID_NAME}.flac #>>> || return 1
+	run_cmd "${FUNCNAME}: info" metaflac --list			${ID_NAME}.flac | ${GREP} -A4 "^METADATA" | ${GREP} -v "^--$" #>>> || return 1
+	run_cmd "${FUNCNAME}: info" metaflac --export-tags-to=-		${ID_NAME}.flac || return 1
+	run_cmd "${FUNCNAME}: info" metaflac --export-cuesheet-to=-	${ID_NAME}.flac || return 1
 
 	########################################
 	run_cmd "${FUNCNAME}: archive"
