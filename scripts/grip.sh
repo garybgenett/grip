@@ -1185,6 +1185,7 @@ function cd_encode {
 			BEG="$(echo "${NUM}" | ${SED} "s|^([0-9]{2})-([0-9]{2})$|\1|g")"
 			END="$(echo "${NUM}" | ${SED} "s|^([0-9]{2})-([0-9]{2})$|\2|g")"
 		done
+		declare FLAC_MANY_MIX="false"
 		while {
 			(( ${IDXN} <= 999 )) &&
 			(( ${FILE} <= ${TRCK} ));
@@ -1214,11 +1215,14 @@ function cd_encode {
 				IDXN="$(expr ${IDXN} + 1)"
 			fi
 			index_do ${FILE} "[+]?"
+			if [[ -z $(meta_get ${FILE}_A | ${GREP} "^$(meta_get ARTS)(${FLAC_ADIV}.+)?$") ]]; then
+				FLAC_MANY_MIX="true"
+			fi
 			FILE="$(expr ${FILE} + 1)"
 		done
 		if [[ $(meta_get ARTS) == ${FLAC_MANY} ]]; then
 			${SED} -i "s|^(TITLE=)${FLAC_MANY}${FLAC_TDIV}|\1|g"	_metadata.tags
-		else
+		elif ! ${FLAC_MANY_MIX}; then
 			${SED} -i "s|^(CHAPTER.+)${FLAC_TDIV}.+$|\1|g"		_metadata.tags
 		fi
 		touch -r .metadata _metadata.tags
