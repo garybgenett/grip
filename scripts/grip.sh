@@ -403,7 +403,9 @@ function cd_encode {
 		${RESET} &&
 		! ${CD_ENCODE_LOOP};
 	}; then
-		${RM} _image.* *.null *.html *.json
+		${RM} \
+			id.* mb.* _image.* \
+			*.null *.html *.json
 		${FUNCNAME} -s
 	fi
 
