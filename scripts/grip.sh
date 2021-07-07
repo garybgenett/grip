@@ -88,7 +88,7 @@ declare ID_BCVR=
 declare ID_MCVR=
 
 declare ID_CODE= ; declare ID_CODE_CHARS="[0-9]{13}"
-declare ID_DISC= ; declare ID_DISC_CHARS="[a-zA-Z0-9_.-]{28}"
+declare ID_DISC= ; declare ID_DISC_CHARS="[a-zA-Z0-9_.]{27}-"
 declare ID_MBID= ; declare ID_MBID_CHARS="[0-9a-f-]{36}"
 declare ID_COGS= ; declare ID_COGS_CHARS="m?[0-9]+"
 
