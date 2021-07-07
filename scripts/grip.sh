@@ -403,7 +403,7 @@ function cd_encode {
 		${RESET} &&
 		! ${CD_ENCODE_LOOP};
 	}; then
-		${RM} \
+		run_cmd "${FUNCNAME}" ${RM} \
 			id.* mb.* _image.* \
 			*.null *.html *.json
 		${FUNCNAME} -s
