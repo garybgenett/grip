@@ -131,7 +131,7 @@ if [[ ${1} == -+([a-z]) ]]; then
 	shift
 fi
 
-if [[ ${RTYPE} != -[lry] ]]; then
+if [[ ${RTYPE} == -[dvm] ]]; then
 	[[ ${1} == +([0-9])	]] && TRACKN="${1}"				&& shift
 	[[ ${1} == +([A-Za-z])	]] && A_LANG="${1}"				&& shift
 	[[ ${1} == +([A-Za-z])	]] && S_LANG="${1}"				&& shift
@@ -1737,6 +1737,49 @@ elif [[ ${RTYPE} == -m ]]; then		mp_encode	"${@}" || exit 1
 elif [[ ${RTYPE} == -a ]]; then		cd_export	"${@}" || exit 1
 elif [[ ${RTYPE} == -t ]]; then		cd_cuefile	"${@}" || exit 1
 elif [[ ${RTYPE} == -c ]]; then		cd_encode	"${@}" || exit 1
+
+########################################
+
+else
+	cat <<_EOF_
+================================================================================
+--- ${SCRIPT}: dvd to iso ---
+  -d <s>		ddrescue dvd to .iso transfer
+    <s>			dvd device file (example: /dev/sr0)
+
+--- ${SCRIPT}: dvd/iso to mp4 ---
+  -v [n] [a] [t] <s>	transcode using vlc (-v preferred)
+  -m [n] [a] [t] <s>	mencoder two-pass encoding (prompts for crop value)
+    [n]			optional dvd title number to extract	(default: ${TRACKN:-none})
+    [a]			optional audio language			(default: ${A_LANG:-none})
+    [t]			optional add subtitles in language	(default: ${S_LANG:-none})
+    <s>			source iso or device file (example: /dev/sr0)
+
+--- ${SCRIPT}: cd to flac ---
+  -a			simple audio cd to individual .wav files (-c preferred)
+  -t			generate cue data for audio cd without it
+  -t 2>/dev/null	filter output to valid .cue contents
+  -c			export audio cd to packed .flac (interactive prompts)
+  -c -r			remove downloaded files before starting export
+  -c -s			structured listing of directory contents
+
+--- ${SCRIPT}: flac management ---
+  <file>		unpack .flac into .flac.dir
+  <file> -l		list .flac metadata
+  <file> -x		extract named .metadata/.log files (.flac.dir remains)
+  <file> <tracks>	export tracks into individual .flac files
+  <playlist.m3u>	export author.title.date.track.track_title.flac list
+  -l [list]		sorted list of .flac date/title/author (list optional)
+  -k -l <file>		pre-formatted track/time list for .metadata INDX
+  -k -i			(obsolete: replaced by .metadata SIZE)
+  -y -l			list file metadata for all .flac
+  -y			create .metadata/.logs from all .flac
+  -r -m <list>		edit .metadata and keep timestamps
+  -r <list>		rebuild .flac and keep timestamps (manual)
+  -r -a <list>		rebuild .flac and keep timestamps (automatic)
+  -r -u <list>		unpack list of files in preparation for rebuild
+================================================================================
+_EOF_
 fi
 
 exit 0
