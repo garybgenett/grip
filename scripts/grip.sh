@@ -61,7 +61,7 @@ declare FLAC_BLCK="8"
 
 declare ID_NAME=
 declare ID_FILE_CHARS="-+:=${FLAC_ISEP}"
-declare ID_EXTR_CHARS="#()<>:;,&!?%$'"
+declare ID_EXTR_CHARS="#*()<>:;,&!?%$'"
 declare ID_ESCP_CHARS="&"
 declare ID_NAME_CHARS="[-._a-zA-Z0-9+]+"
 declare ID_TITL_CHARS="$(echo "${ID_NAME_CHARS}" | ${SED} "s|\]\+?$||g")${FLAC_TDIV}${FLAC_NDIV}${ID_EXTR_CHARS}]+"
