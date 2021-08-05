@@ -1743,11 +1743,13 @@ elif [[ ${RTYPE} == -c ]]; then		cd_encode	"${@}" || exit 1
 else
 	cat <<_EOF_
 ================================================================================
---- ${SCRIPT}: dvd to iso ---
+=== ${SCRIPT}: dvd/iso and cd/flac/wav ripping and transcoding tool
+================================================================================
+--- dvd to iso ---
   -d <s>		ddrescue dvd to .iso transfer
     <s>			dvd device file (example: /dev/sr0)
 
---- ${SCRIPT}: dvd/iso to mp4 ---
+--- dvd/iso to mp4 ---
   -v [n] [a] [t] <s>	transcode using vlc (-v preferred)
   -m [n] [a] [t] <s>	mencoder two-pass encoding (prompts for crop value)
     [n]			optional dvd title number to extract	(default: ${TRACKN:-none})
@@ -1755,7 +1757,7 @@ else
     [t]			optional add subtitles in language	(default: ${S_LANG:-none})
     <s>			source iso or device file (example: /dev/sr0)
 
---- ${SCRIPT}: cd to flac ---
+--- cd to flac ---
   -a			simple audio cd to individual .wav files (-c preferred)
   -t			generate cue data for audio cd without it
   -t 2>/dev/null	filter output to valid .cue contents
@@ -1763,7 +1765,7 @@ else
   -c -r			remove downloaded files before starting export
   -c -s			structured listing of directory contents
 
---- ${SCRIPT}: flac management ---
+--- flac management ---
   <file>		unpack .flac into .flac.dir
   <file> -l		list .flac metadata
   <file> -x		extract named .metadata/.log files (.flac.dir remains)
