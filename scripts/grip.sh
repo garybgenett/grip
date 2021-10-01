@@ -1785,9 +1785,9 @@ else
   <playlist.m3u>	export author.title.date.track.track_title.flac list
   -l [list]		sorted list of .flac date/title/author (list optional)
   -k -l <file>		pre-formatted track/time list for .metadata INDX
-  -k -i			(obsolete: replaced by .metadata SIZE)
+  -k -i <images>	(obsolete: replaced by .metadata SIZE)
   -y -l			list file metadata for all .flac
-  -y			create .metadata/.logs from all .flac
+  -y			create .metadata and .logs from all .flac
   -r -m <list>		edit .metadata and keep timestamps
   -r <list>		rebuild .flac and keep timestamps (manual)
   -r -a <list>		rebuild .flac and keep timestamps (automatic)
