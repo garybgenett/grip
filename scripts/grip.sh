@@ -1729,12 +1729,20 @@ function flac_rebuild {
 
 ################################################################################
 
-  if { [[ -s ${SOURCE} ]] && [[ -n $(file -L ${SOURCE} | ${GREP} "FLAC") ]]; }; then	flac_unpack	"${SOURCE}" "${@}" || exit 1
-elif { [[ -s ${SOURCE} ]] && [[ ${SOURCE/%.m3u} != ${SOURCE} ]]; }; then		flac_playlist	"${SOURCE}" "${@}" || exit 1
-elif [[ ${RTYPE} == -l ]]; then		flac_list	"${@}" || exit 1
-elif [[ ${RTYPE} == -k ]]; then		flac_hacks	"${@}" || exit 1
-elif [[ ${RTYPE} == -y ]]; then		flac_metadata	"${@}" || exit 1
-elif [[ ${RTYPE} == -r ]]; then		flac_rebuild	"${@}" || exit 1
+declare ARGS=("${@}")
+if [[ -s ${SOURCE} ]]; then
+	ARGS=("${SOURCE}" "${@}")
+fi
+
+########################################
+
+if { [[ -z ${RTYPE} ]] && [[ -s ${SOURCE} ]]; }; then
+	if [[ -n $(file -L ${SOURCE} | ${GREP} "FLAC")	]]; then flac_unpack	"${ARGS[@]}" || exit 1; fi
+	if [[ ${SOURCE/%.m3u} != ${SOURCE}		]]; then flac_playlist	"${ARGS[@]}" || exit 1; fi
+elif [[ ${RTYPE} == -l ]]; then		flac_list	"${ARGS[@]}" || exit 1
+elif [[ ${RTYPE} == -k ]]; then		flac_hacks	"${ARGS[@]}" || exit 1
+elif [[ ${RTYPE} == -y ]]; then		flac_metadata	"${ARGS[@]}" || exit 1
+elif [[ ${RTYPE} == -r ]]; then		flac_rebuild	"${ARGS[@]}" || exit 1
 elif [[ ${RTYPE} == -d ]]; then		dvd_rescue	"${@}" || exit 1
 elif [[ ${RTYPE} == -v ]]; then		vlc_encode	"${@}" || exit 1
 elif [[ ${RTYPE} == -m ]]; then		mp_encode	"${@}" || exit 1
