@@ -1702,23 +1702,23 @@ function flac_rebuild {
 	fi
 	for FILE in "${@}"; do
 		[[ -z $(file ${FILE} | ${GREP} "FLAC") ]] && continue
-		flac_unpack ${FILE}											|| return 1
-		${RSYNC_U} ${FILE} ${FILE}.dir/${FILE}									|| return 1
-		flac_unpack ${FILE}.dir/${FILE}										|| return 1
-		${RSYNC_U} .metadata/${FILE/%.flac}.metadata ${FILE}.dir/${FILE}.dir/.metadata				|| return 1
-		${RM} ${FILE}.dir/${FILE}.dir/_metadata*								|| return 1
+		flac_unpack ${FILE}										|| return 1
+		${RSYNC_U} ${FILE} ${FILE}.dir/${FILE}								|| return 1
+		flac_unpack ${FILE}.dir/${FILE}									|| return 1
+		${RSYNC_U} .metadata/${FILE/%.flac}.metadata ${FILE}.dir/${FILE}.dir/.metadata			|| return 1
+		${RM} ${FILE}.dir/${FILE}.dir/_metadata*							|| return 1
 		${UNPK} && continue
 		if ${AUTO}; then
-			(cd ${FILE}.dir/${FILE}.dir && EDITOR="cat" DATE="$(cat .exported)" cd_encode ${REST})		|| return 1
+			(cd ${FILE}.dir/${FILE}.dir && EDITOR="cat" DATE="$(cat .exported)" cd_encode ${REST})	|| return 1
 			diff ${DIFF_OPTS} ${FILE}.dir ${FILE}.dir/${FILE}.dir >${FILE}.diff 2>&1
 		else
 			(cd ${FILE}.dir/${FILE}.dir && EDITOR="cat" DATE="$(cat .exported)" PROMPT="simple" ${SHELL})	|| return 1
 			vdiff -r ${FILE}.dir ${FILE}.dir/${FILE}.dir
 			read -p "CONTINUE"
 		fi
-		touch -r ${FILE} ${FILE}.dir/${FILE}.dir/${FILE}							|| return 1
-		${RSYNC_U} ${FILE}.dir/${FILE}.dir/${FILE} ${FILE}							|| return 1
-		! ${AUTO} && { ${RM} ${FILE}.dir									|| return 1; }
+		touch -r ${FILE} ${FILE}.dir/${FILE}.dir/${FILE}						|| return 1
+		${RSYNC_U} ${FILE}.dir/${FILE}.dir/${FILE} ${FILE}						|| return 1
+		! ${AUTO} && { ${RM} ${FILE}.dir								|| return 1; }
 		${LL} ${FILE}*
 	done
 	return 0
