@@ -1282,7 +1282,8 @@ function cd_encode {
 		function tarfiles {
 			find ./ -maxdepth 1 ! -type d | ${SED} "s|^\./||g" | sort
 		}
-		run_cmd "${FUNCNAME}: archive" chmod ${CHMOD} $(tarfiles)
+		run_cmd "${FUNCNAME}: archive" chmod ${CHMOD} $(tarfiles) \
+			|| return 1
 		run_cmd "${FUNCNAME}: archive" ${FLAC_HASH} $(tarfiles) \
 			| ${GREP} -v \
 				-e " _checksum" \
