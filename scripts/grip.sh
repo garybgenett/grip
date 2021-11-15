@@ -1762,7 +1762,7 @@ else
     <s>			dvd device file (example: /dev/sr0)
 
 --- dvd/iso to mp4 ---
-  -v [n] [a] [t] <s>	transcode using vlc (-v preferred)
+  -v [n] [a] [t] <s>	transcode using vlc (-m preferred)
   -m [n] [a] [t] <s>	mencoder two-pass encoding (prompts for crop value)
     [n]			optional dvd title number to extract	(default: ${TRACKN:-none})
     [a]			optional audio language			(default: ${A_LANG:-none})
