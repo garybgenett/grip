@@ -857,27 +857,24 @@ function cd_encode {
 			return 1
 		fi
 		declare IMGS=($(${SED} \
-				-e "s| \"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
-				-e "s|src=\"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
-				-e "s|content=\"(https://img.discogs.com/[^\"]+)|\n\1\n|g" \
+				-e "s| \"(https://i.discogs.com/[^\"]+)|\n\1\n|g" \
+				-e "s|src=\"(https://i.discogs.com/[^\"]+)|\n\1\n|g" \
+				-e "s|content=\"(https://i.discogs.com/[^\"]+)|\n\1\n|g" \
 				image.${ID_COGS}.html |
-			${GREP} "^https://img.discogs.com/" |
-			${GREP} "quality\(90\)" |
-			${GREP} "format\(jpeg\)" |
+			${GREP} "^https://i.discogs.com/" |
+			${GREP} "/q:90/" |
 			sort -u
 		))
 		declare IMG=
 		for FILE in ${IMGS[@]}; do
 			IMG="$(echo "${FILE}" | ${SED} \
-				-e "s|.jpe?g.jpg$||g" \
-				-e "s|^.+R-||g" \
-				-e "s|-|.|g" \
+				-e "s|^.+/([^/]+).jpeg$|\1|g" \
 			)"
-			if [[ ! -s image.${IMG}.jpg ]]; then
-				run_cmd "${FUNCNAME}: images" go_fetch "image.${IMG}.jpg" "${FILE}" || return 1
+			if [[ ! -s image.${ID_COGS}.${IMG}.jpg ]]; then
+				run_cmd "${FUNCNAME}: images" go_fetch "image.${ID_COGS}.${IMG}.jpg" "${FILE}" || return 1
 			fi
-			if [[ ! -s image.${IMG}.jpg ]]; then
-				${LL} image.${IMG}.jpg*
+			if [[ ! -s image.${ID_COGS}.${IMG}.jpg ]]; then
+				${LL} image.$(ID_COGS).${IMG}.jpg*
 				return 1
 			fi
 		done
